@@ -1240,7 +1240,7 @@ html.login-done .login-gate{display:none !important}
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-22-0128-friendly-challenge-faceoff";
+  var LL_DEPLOY_ID = "2026-11-22-0153-deploy-notify-all";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Fresh and empty — no tournament published yet.
@@ -5750,13 +5750,16 @@ html.login-done .login-gate{display:none !important}
      now watches the deploy stamp as well as the results, reloads
      the page onto the new copy, and this check then adds the
      notification.
-     • First run on a device: a member whose login was already
-       remembered from an older copy (or who already has bell
-       notifications or a saved profile photo here) is a returning
-       member and IS told about this deploy. A genuinely new
-       member on a fresh device is not told the app is “updated”
-       on their very first open — the current deploy is simply
-       remembered as their starting point.
+     • EVERY member who opens or logs in on a copy whose
+       fingerprint they have not been told about yet is told —
+       including the first deploy a device has ever tracked.
+       (An earlier version tried to spare “brand-new” members the
+       notice on their first open by guessing who was returning
+       from footprints like a remembered login, old notifications
+       or a saved photo. That guess misfired: the footprints it
+       checked had shipped in the same deploy, so real members
+       looked brand-new and nobody was notified. The guess is
+       gone — Robin's rule is all members, every deploy.)
      • The markers are per member (“llDeploySeen:<name>”, like the
        notifications themselves) plus one device-wide marker
        (“llDeploySeen”), and hold no tournament data. */
@@ -5771,16 +5774,6 @@ html.login-done .login-gate{display:none !important}
     return id + "|" + hash;
   }
   function currentUser(){ return window.LL_CURRENT_USER || ""; }
-  /* True when this page load started with a login already
-     remembered from an earlier visit — i.e. a returning member,
-     not someone logging in for the first time right now. */
-  var rememberedAtLoad = !!currentUser();
-  function hasPriorFootprint(name){
-    if(rememberedAtLoad && currentUser() === name) return true;
-    if(lsGet("llNotifs:" + name)) return true;
-    if(lsGet("llAvatar:" + name)) return true;
-    return false;
-  }
   function check(){
     var name = currentUser();
     if(!name) return;
@@ -5788,27 +5781,19 @@ html.login-done .login-gate{display:none !important}
     var fp = fingerprint();
     if(!fp || fp === "|") return;
     var userKey = "llDeploySeen:" + name;
-    var seen = lsGet(userKey);
-    if(seen === fp){
+    if(lsGet(userKey) === fp){
+      /* This member was already told about this deploy — just keep
+         the device-wide marker in step and stop. */
       if(lsGet("llDeploySeen") !== fp) lsSet("llDeploySeen", fp);
       return;
     }
-    var deviceSeen = lsGet("llDeploySeen");
-    var notify;
-    if(seen !== null && seen !== undefined){
-      notify = true; /* this member was told about an older deploy */
-    }else if(deviceSeen !== null && deviceSeen !== undefined && deviceSeen !== fp){
-      notify = true; /* this device ran an older deploy */
-    }else if(deviceSeen === fp){
-      notify = false; /* this deploy already handled on this device */
-    }else{
-      /* First deploy this device has ever tracked: tell returning
-         members, quietly remember the starting point for new ones. */
-      notify = hasPriorFootprint(name);
-    }
+    /* This member has not been told about this deploy yet — tell
+       them now, exactly once, and remember it for this member and
+       for the device. No exceptions: a first-ever tracked deploy
+       notifies like any other, so no member is silently skipped. */
     lsSet(userKey, fp);
     lsSet("llDeploySeen", fp);
-    if(notify) window.LL_addNotification(name, DEPLOY_TEXT);
+    window.LL_addNotification(name, DEPLOY_TEXT);
   }
   window.LL_checkDeployNotice = check;
   check();
