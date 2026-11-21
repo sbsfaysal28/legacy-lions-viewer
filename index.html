@@ -1240,7 +1240,7 @@ html.login-done .login-gate{display:none !important}
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-22-0153-deploy-notify-all";
+  var LL_DEPLOY_ID = "2026-11-22-0210-profile-photo-full-res";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Fresh and empty — no tournament published yet.
@@ -3580,10 +3580,14 @@ html.login-done .login-gate{display:none !important}
        document whose id is their email prefix (“llc-045”, “llc-069”
        — see window.LL_idFor in the login script), with the fields
        name (original spelling), photo (a JPEG data URL) and
-       updatedAt. Uploading downscales the picture with a canvas to
-       at most 256px on the longest side and re-encodes it as JPEG
-       (quality 0.7), so the data URL stays tens of kilobytes — far
-       below Firestore's 1 MB document limit. The write merges into
+       updatedAt. Uploading re-encodes the picture with a canvas at
+       full resolution — up to 1080px on the longest side (the
+       downloaded cards' own resolution) as JPEG quality 0.92 —
+       stepping the quality, then the size, down only as far as
+       Firestore's 1 MB document limit requires, so the data URL
+       always stays safely below that limit. (Before 2026-11-21
+       uploads were shrunk to 256px, which is why the photo on the
+       downloaded ranking cards looked broken.) The write merges into
        the member's own document (the published rules let a member
        write only their own document, and any signed-in member read
        them all), the header avatar updates immediately, and the
@@ -3875,7 +3879,7 @@ html.login-done .login-gate{display:none !important}
      raise UPLOAD_EPOCH by 1. */
   var MAX_UPLOADS = 2;
   var MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-  var UPLOAD_EPOCH = 2;
+  var UPLOAD_EPOCH = 3;
   function countFromData(data){
     if(!data || data.uploadEpoch !== UPLOAD_EPOCH) return 0;
     return (typeof data.uploadCount === "number" && isFinite(data.uploadCount)) ? Math.max(0, Math.floor(data.uploadCount)) : 0;
@@ -4026,9 +4030,11 @@ html.login-done .login-gate{display:none !important}
   /* Upload profile picture — the two restrictions above apply:
      the picked file must be 5MB or smaller, and each member gets
      at most 2 uploads per round, counted by the uploadCount field in
-     their Firestore document. Accepted pictures are downscaled to
-     at most 256px on the longest side, saved as JPEG (quality
-     0.7), then written to this member's own document in the
+     their Firestore document. Accepted pictures are kept at full
+     resolution — up to 1080px on the longest side, JPEG quality
+     0.92, stepping down only if Firestore's 1 MiB document limit
+     requires it (see the encoder in the upload handler) — then
+     written to this member's own document in the
      Firestore “profiles” collection (merge, keeping the name)
      together with the increased count. Only a successful write
      updates the header avatar, the page's photo circles and the
@@ -4065,19 +4071,44 @@ html.login-done .login-gate{display:none !important}
       reader.onload = function(){
         var img = new Image();
         img.onload = function(){
-          var max = 256;
-          var w = img.naturalWidth || img.width || max;
-          var h = img.naturalHeight || img.height || max;
-          var scale = Math.min(1, max / Math.max(w, h));
+          /* Full resolution (fixed 2026-11-21): the picture used to
+             be shrunk to at most 256px before saving, so on the
+             downloaded cards — 1080px across, with the photo
+             covering most of the card — it was stretched more than
+             4× and came out blocky and broken-looking. The picture
+             is now kept at up to 1080px on the longest side (the
+             cards' own full resolution, so the card shows the
+             photo at its real resolution) at JPEG quality 0.92.
+             Firestore caps a document at 1 MiB, so if a very
+             detailed picture still encodes too large, the quality —
+             then the size — steps down just until it fits safely;
+             the first (largest, sharpest) encoding that fits is
+             the one saved. */
+          var PHOTO_MAX_DIM = 1080;
+          var PHOTO_URL_BUDGET = 950000; /* data-URL chars — Firestore's 1 MiB document limit, with room for the other fields */
+          var srcW = img.naturalWidth || img.width || 0;
+          var srcH = img.naturalHeight || img.height || 0;
+          if(!srcW || !srcH){ setMsg(photoMsg, "Could not save that picture — try another one.", false); return; }
           var canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(w * scale));
-          canvas.height = Math.max(1, Math.round(h * scale));
           var ctx = canvas.getContext("2d");
           if(!ctx){ setMsg(photoMsg, "Could not save that picture — try another one.", false); return; }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          function encodeAt(maxDim, quality){
+            var scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+            canvas.width = Math.max(1, Math.round(srcW * scale));
+            canvas.height = Math.max(1, Math.round(srcH * scale));
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            try{ return canvas.toDataURL("image/jpeg", quality) || ""; }catch(e){ return ""; }
+          }
           var url = "";
-          try{ url = canvas.toDataURL("image/jpeg", 0.7); }catch(e){}
-          if(!url || url.indexOf("data:image/jpeg") !== 0){
+          var dims = [PHOTO_MAX_DIM, 900, 768, 640, 512];
+          var quals = [0.92, 0.85, 0.78, 0.7];
+          for(var di = 0; di < dims.length && !url; di++){
+            for(var qi = 0; qi < quals.length; qi++){
+              var cand = encodeAt(dims[di], quals[qi]);
+              if(cand && cand.indexOf("data:image/jpeg") === 0 && cand.length <= PHOTO_URL_BUDGET){ url = cand; break; }
+            }
+          }
+          if(!url){
             setMsg(photoMsg, "Could not save that picture — try a smaller one.", false);
             return;
           }
