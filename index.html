@@ -1228,7 +1228,7 @@ html.login-done .login-gate{display:none !important}
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-21-1115-deploy-notify";
+  var LL_DEPLOY_ID = "2026-11-22-0115-remove-netlify-badge";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Fresh and empty — no tournament published yet.
@@ -5751,6 +5751,44 @@ html.login-done .login-gate{display:none !important}
   }, 1500);
 })();
 </script>
+<style>
+/* “Powered by Netlify” — hidden completely. Robin's request 2026-11-22:
+   the credit must not show at all. Netlify adds it when serving the
+   site (it is not in the app's own markup), so these rules plus the
+   script below hide it however and whenever it appears. */
+a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"],
+[class*="netlify" i],[id*="netlify" i],[data-netlify]{display:none !important;}
+</style>
+<script>
+(function(){
+  function isCredit(el){
+    if(!el||el.nodeType!==1||el===document.body||el===document.documentElement) return false;
+    try{
+      var h=(el.getAttribute&&el.getAttribute("href"))||el.href||"";
+      if(h&&/netlify\.(com|app|io|org)/i.test(String(h))) return true;
+      var s=String((el.className&&el.className.baseVal!==undefined?el.className.baseVal:el.className)||"")+" "+(el.id||"")+" "+((el.getAttribute&&(el.getAttribute("alt")||el.getAttribute("title")||el.getAttribute("aria-label")))||"");
+      if(/netlify/i.test(s)) return true;
+      var t=((el.textContent)||"").replace(/\s+/g," ").toLowerCase();
+      if(t.length<120&&(t.indexOf("powered by netlify")!==-1||t.indexOf("deploys by netlify")!==-1||t.indexOf("built with netlify")!==-1)) return true;
+    }catch(e){}
+    return false;
+  }
+  function sweep(){
+    try{
+      var all=document.querySelectorAll("body *");
+      for(var i=0;i<all.length;i++){ var el=all[i]; if(isCredit(el)){ try{ el.style.setProperty("display","none","important"); }catch(e){} } }
+    }catch(e){}
+  }
+  var until=Date.now()+30000;
+  (function tick(){ sweep(); if(Date.now()<until) setTimeout(tick,1000); })();
+  if(window.MutationObserver){
+    try{
+      var ob=new MutationObserver(function(){ sweep(); });
+      ob.observe(document.documentElement,{childList:true,subtree:true});
+      setTimeout(function(){ try{ ob.disconnect(); }catch(e){} },30000);
+    }catch(e){}
+  }
+})();
+</script>
 </body>
 </html>
-<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" data-netlify-site-id="1342692b-c9d6-4af3-bdb3-84ec704d0e62" data-app-host="app.netlify.com" data-account-tier="free"></script>
