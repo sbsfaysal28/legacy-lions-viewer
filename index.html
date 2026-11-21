@@ -828,13 +828,25 @@ html.login-done .login-gate{display:none !important}
 .fc-preview{margin-top:10px;display:none}
 .fc-preview img{width:100%;max-width:520px;border-radius:10px;border:1px solid var(--line);display:block}
 .fc-preview span{font-size:13px;color:var(--muted);display:block;margin-top:6px}
-.fc-req{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 14px}
-.fc-req-names{flex:1;min-width:180px;font-weight:600;word-break:break-word}
-.fc-req-names .fc-arrow{color:var(--muted);font-weight:700;margin:0 4px}
-.fc-req-date{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+/* Pending challenge requests — grouped under date dividers, newest
+   day first. Each request is a face-off card: challenger on the left,
+   gold arrow chip in the middle, challenged player on the right, and
+   a meta strip underneath with the status, the time it was sent and
+   the Cancel button. */
+.fc-date-head{display:flex;align-items:center;gap:10px;margin:16px 0 2px}
+.fc-date-head:first-child{margin-top:2px}
+.fc-date-label{font-family:"Barlow Condensed",sans-serif;font-size:17px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+.fc-date-line{flex:1;height:1px;background:var(--line)}
+.fc-date-count{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--gold-bg);border:1px solid var(--gold);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.fc-req{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:12px 14px;box-shadow:0 1px 3px rgba(10,40,20,.06)}
+.fc-req-main{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.fc-req-vs{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#171200;font-size:16px;font-weight:800;line-height:1;flex:none}
+.fc-req-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line)}
+.fc-req-time{font-size:13px;font-weight:600;color:var(--muted)}
 .fc-status{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);white-space:nowrap}
 .fc-status.played{background:var(--accent);border-color:var(--accent);color:#fff}
-.fc-cancel{min-height:38px}
+.fc-cancel{min-height:38px;margin-left:auto}
+@media(max-width:480px){ .fc-req-vs{width:26px;height:26px;font-size:14px} }
 @media(max-width:480px){ .fc-score{font-size:24px;padding:5px 9px} .fc-side{font-size:14px} }
 </style>
 </head>
@@ -1198,13 +1210,13 @@ html.login-done .login-gate{display:none !important}
     <div class="fc-list" id="fcResults"></div>
     <div class="empty" id="fcResultsEmpty">No friendly results yet.</div>
     <h3 class="fc-sub">My challenge requests</h3>
-    <p class="hint">Challenges you sent and challenges sent to you that are still waiting for Robin to arrange the match. You can cancel a challenge you sent.</p>
+    <p class="hint">Challenges you sent and challenges sent to you that are still waiting for Robin to arrange the match — grouped by the day each one was sent, newest first. You can cancel a challenge you sent.</p>
     <div class="fc-list" id="fcRequests"></div>
     <div class="empty" id="fcRequestsEmpty">No challenge requests yet.</div>
     <div class="msg" id="fcReqMsg" role="status"></div>
     <div id="fcAllWrap" style="display:none">
       <h3 class="fc-sub">All challenge requests</h3>
-      <p class="hint">Every pending challenge request from all players — who wants to play whom.</p>
+      <p class="hint">Every pending challenge request from all players — who wants to play whom — grouped by the day each one was sent, newest first.</p>
       <div class="fc-list" id="fcAllRequests"></div>
       <div class="empty" id="fcAllEmpty">No pending challenge requests.</div>
     </div>
@@ -1228,7 +1240,7 @@ html.login-done .login-gate{display:none !important}
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-22-0115-remove-netlify-badge";
+  var LL_DEPLOY_ID = "2026-11-22-0128-friendly-challenge-faceoff";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Fresh and empty — no tournament published yet.
@@ -5443,19 +5455,82 @@ html.login-done .login-gate{display:none !important}
     }
     return false;
   }
+  /* ---------- Pending requests grouped by date ----------
+     Both pending lists (mine, and Robin's all-requests list) are
+     separated by the day each challenge was sent: a gold date
+     divider (“Today”, “Yesterday”, or the full date) with a count
+     of that day's pending matches sits above each day's cards.
+     The requests arrive sorted newest first, so the days come out
+     newest first too; a request whose timestamp never arrived
+     groups last, under “Date not recorded”. */
+  function dayKey(ms){
+    if(!ms) return "none";
+    var d = new Date(ms);
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+  function dayLabel(ms){
+    if(!ms) return "Date not recorded";
+    var d = new Date(ms), now = new Date();
+    var startOf = function(x){ return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    var diff = Math.round((startOf(now) - startOf(d)) / 86400000);
+    if(diff === 0) return "Today";
+    if(diff === 1) return "Yesterday";
+    try{ return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
+    catch(e){ return d.toLocaleDateString(); }
+  }
+  function timeOnly(ms){
+    var d = new Date(ms);
+    if(isNaN(d.getTime())) return "";
+    try{ return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+    catch(e){ return d.toLocaleTimeString(); }
+  }
+  function appendPendingGrouped(el, items, cancelFor){
+    var lastKey = null, countEl = null, count = 0;
+    items.forEach(function(r){
+      var k = dayKey(r.createdMs);
+      if(k !== lastKey){
+        lastKey = k; count = 0;
+        var head = document.createElement("div");
+        head.className = "fc-date-head";
+        var lab = document.createElement("span");
+        lab.className = "fc-date-label";
+        lab.textContent = dayLabel(r.createdMs);
+        var line = document.createElement("span");
+        line.className = "fc-date-line";
+        line.setAttribute("aria-hidden", "true");
+        countEl = document.createElement("span");
+        countEl.className = "fc-date-count";
+        head.appendChild(lab); head.appendChild(line); head.appendChild(countEl);
+        el.appendChild(head);
+      }
+      count++;
+      countEl.textContent = count + " pending";
+      el.appendChild(reqRow(r, cancelFor(r)));
+    });
+  }
   function reqRow(r, withCancel){
     var played = pairPlayed(r.fromName, r.toName);
     var row = document.createElement("div");
     row.className = "fc-req";
-    var names = document.createElement("span");
-    names.className = "fc-req-names";
-    names.innerHTML = esc(r.fromName || "?") + '<span class="fc-arrow" aria-hidden="true">→</span>' + esc(r.toName || "?")
-      + (r.createdMs ? '<span class="fc-req-date">' + esc(fmtTime(r.createdMs)) + '</span>' : '');
-    row.appendChild(names);
+    var main = document.createElement("div");
+    main.className = "fc-req-main";
+    main.innerHTML =
+      '<span class="fc-side">' + avatarHTML(r.fromName) + '<span>' + esc(r.fromName || "?") + '</span></span>'
+      + '<span class="fc-req-vs" aria-hidden="true">→</span>'
+      + '<span class="fc-side right">' + avatarHTML(r.toName) + '<span>' + esc(r.toName || "?") + '</span></span>';
+    row.appendChild(main);
+    var meta = document.createElement("div");
+    meta.className = "fc-req-meta";
     var st = document.createElement("span");
     st.className = "fc-status" + (played ? " played" : "");
     st.textContent = played ? "Played" : "Pending";
-    row.appendChild(st);
+    meta.appendChild(st);
+    if(r.createdMs){
+      var tm = document.createElement("span");
+      tm.className = "fc-req-time";
+      tm.textContent = "Sent " + timeOnly(r.createdMs);
+      meta.appendChild(tm);
+    }
     if(withCancel && !played){
       var c = document.createElement("button");
       c.type = "button";
@@ -5463,8 +5538,9 @@ html.login-done .login-gate{display:none !important}
       c.textContent = "Cancel";
       c.setAttribute("data-cancel-id", r.id);
       c.setAttribute("aria-label", "Cancel your challenge to " + (r.toName || "this player"));
-      row.appendChild(c);
+      meta.appendChild(c);
     }
+    row.appendChild(meta);
     return row;
   }
   function setReqMsg(text, ok){
@@ -5480,7 +5556,7 @@ html.login-done .login-gate{display:none !important}
     });
     if(listEl){
       listEl.innerHTML = "";
-      mine.forEach(function(r){ listEl.appendChild(reqRow(r, r.from === mid)); });
+      appendPendingGrouped(listEl, mine, function(r){ return r.from === mid; });
     }
     if(emptyEl){
       emptyEl.style.display = mine.length ? "none" : "block";
@@ -5498,11 +5574,12 @@ html.login-done .login-gate{display:none !important}
         var allEl = $("fcAllRequests"), allEmpty = $("fcAllEmpty");
         if(allEl){
           allEl.innerHTML = "";
-          all.forEach(function(r){ allEl.appendChild(reqRow(r, false)); });
+          appendPendingGrouped(allEl, all, function(){ return false; });
         }
         if(allEmpty) allEmpty.style.display = all.length ? "none" : "block";
       }
     }
+    try{ if(window.LL_applyPhotosToPage) window.LL_applyPhotosToPage(); }catch(e){}
   }
   function cancelRequest(id, btn){
     var dbv = fbDb();
