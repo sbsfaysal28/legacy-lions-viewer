@@ -1363,7 +1363,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   <!-- FRIENDLY CHALLENGE -->
   <section class="card screen" id="screen-friendly" aria-labelledby="h-friendly">
     <h2 id="h-friendly"><span class="stepnum">7</span> Friendly challenge</h2>
-    <p class="hint">Your friendly matches and challenge requests. To challenge someone, tap the search icon at the top, find their profile and tap <strong>Challenge to Friendly</strong> — the request goes to Robin, who arranges the match and enters the score in the main app. Played results then appear here.</p>
+    <p class="hint">Your friendly matches and challenge requests. To challenge someone, tap the search icon at the top, find their profile and tap <strong>Challenge to Friendly</strong> — the request goes to Robin, who arranges the match and enters the score in the main app. Played results then appear here. You can send up to 3 challenges per day.</p>
     <h3 class="fc-sub">My friendly results</h3>
     <p class="hint">Your last 5 played friendly results, newest first — each with its own downloadable result card.</p>
     <div class="fc-list" id="fcResults"></div>
@@ -1430,11 +1430,13 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-22-1620-loser-strikethrough";
+  var LL_DEPLOY_ID = "2026-11-22-1821-friendly-talha-1-1-siemon";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
-     Fresh and empty — no tournament published yet.
-     No teams, players, fixtures, semi-finals, final or friendlies.
+     Two published friendly results, both played 21 Nov 2026, in
+     time order: Is Hd Talha 1-1 Si Emon (5:34 PM), then Syed
+     Ishtiak Ahmed 1-0 Is Hd Talha (5:38 PM). No teams, players,
+     fixtures, semi-finals or final published yet.
      This copy is view-only: nothing here can be edited or saved. */
   var PUBLISHED = {
     name: "",
@@ -1443,7 +1445,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     fixtures: [],
     semis: [],
     final: null,
-    friendlies: []
+    friendlies: [{ id: "fr-20261121-002", p1Id: null, p2Id: null, p1Name: "Is Hd Talha", p2Name: "Si Emon", g1: 1, g2: 1 }, { id: "fr-20261121-001", p1Id: null, p2Id: null, p1Name: "Syed Ishtiak Ahmed", p2Name: "Is Hd Talha", g1: 1, g2: 0 }]
   };
   var state = JSON.parse(JSON.stringify(PUBLISHED));
   /* Deploy fingerprint shared with the deploy-notifications script
@@ -5234,6 +5236,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
        duplicate (“Challenge already sent.”). On success the button
        disables as “Challenge sent” with “Challenge sent — Robin
        will arrange the match.”
+     • Daily limit (Robin's rule): each member can send at most 3
+       challenges per calendar day (device-local day, the same
+       “Today” the request list uses). The send is blocked with
+       “Daily limit reached — you can send 3 friendly challenges
+       per day.” and the button shows “Daily limit reached”.
      • The Friendly Challenge screen (sidebar, after My Ranking) is
        personal to the logged-in member:
        – “My friendly results”: their last 5 played friendlies from
@@ -5864,6 +5871,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   }
 
   /* ---------- The “Challenge to Friendly” button (search profile view) ---------- */
+  /* Daily limit (Robin's rule): at most 3 challenges sent per member
+     per calendar day. Enforced on send (fresh read) and reflected on
+     the button from the loaded request list. */
+  var CHAL_DAILY_LIMIT = 3;
   var viewedMember = null;
   var chalBusy = false;
   function setChalMsg(text, kind){
@@ -5882,10 +5893,23 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     if(mid && tid && pendingBetween(mid, tid)){
       btn.disabled = true;
       btn.textContent = "Challenge sent";
+    }else if(mid && chalSentToday(mid) >= CHAL_DAILY_LIMIT){
+      btn.disabled = true;
+      btn.textContent = "Daily limit reached";
     }else{
       btn.disabled = false;
       btn.textContent = "Challenge to Friendly";
     }
+  }
+  /* Challenges this member already sent today, from the loaded
+     request list (device-local day, same “Today” as the list). */
+  function chalSentToday(mid){
+    var todayK = dayKey(Date.now());
+    var n = 0;
+    requests.forEach(function(r){
+      if(r.from === mid && r.createdMs && dayKey(r.createdMs) === todayK) n++;
+    });
+    return n;
   }
   window.LL_userViewOpened = function(member){
     viewedMember = member || null;
@@ -5923,6 +5947,30 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
             chalBtn.disabled = true;
             chalBtn.textContent = "Challenge sent";
             setChalMsg("Challenge already sent.");
+            return;
+          }
+          /* Daily limit: at most 3 challenges sent per day (any status
+             counts — pending or already played). Same “today” as the
+             request list: the device-local calendar day. */
+          var sentToday = 0;
+          var todayK = dayKey(Date.now());
+          snap.forEach(function(doc){
+            var d2 = doc.data() || {};
+            if(d2.from !== mid) return;
+            var ms2 = 0;
+            var ca2 = d2.createdAt;
+            try{
+              if(ca2 && typeof ca2.toDate === "function") ms2 = ca2.toDate().getTime();
+              else if(ca2 instanceof Date) ms2 = ca2.getTime();
+              else if(typeof ca2 === "number") ms2 = ca2;
+            }catch(e){}
+            if(ms2 && dayKey(ms2) === todayK) sentToday++;
+          });
+          if(sentToday >= CHAL_DAILY_LIMIT){
+            chalBusy = false;
+            chalBtn.disabled = false;
+            chalBtn.textContent = "Challenge to Friendly";
+            setChalMsg("Daily limit reached — you can send 3 friendly challenges per day.", "err");
             return;
           }
           dbv.collection("challengeRequests").add({
