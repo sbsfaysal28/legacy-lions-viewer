@@ -845,6 +845,7 @@ html.login-done .login-gate{display:none !important}
 .fc-req-time{font-size:13px;font-weight:600;color:var(--muted)}
 .fc-status{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);white-space:nowrap}
 .fc-status.played{background:var(--accent);border-color:var(--accent);color:#fff}
+.fc-req-score{font-size:18px;font-weight:800;color:var(--gold);white-space:nowrap;text-align:center}
 .fc-cancel{min-height:38px;margin-left:auto}
 @media(max-width:480px){ .fc-req-vs{width:26px;height:26px;font-size:14px} }
 @media(max-width:480px){ .fc-score{font-size:24px;padding:5px 9px} .fc-side{font-size:14px} }
@@ -1313,10 +1314,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   <section class="card screen" id="screen-playerstats" aria-labelledby="h-playerstats">
     <h2 id="h-playerstats"><span class="stepnum">5</span> Player stats &amp; ranking</h2>
     <p class="hint" id="psRandomHint" style="display:none">No matches played yet — the order is random for now.</p>
-    <p class="hint">Every player's tournament record, counted live from the published results with the same rules as the main app. A match counts for a player when they took part in it — picked as a scorer or named in a duel; if no scorer or duel is recorded for their team in that match, the whole squad counts. Goals are scorer picks plus full duel goals, and POTM goes to the clear top scorer of a match. Ranked by goals, then wins, then win rate, then matches played. Ten players per page.</p>
+    <p class="hint">Every player's record, counted live from the published results with the same rules as the main app. A match counts for a player when they took part in it — picked as a scorer or named in a duel; if no scorer or duel is recorded for their team in that match, the whole squad counts. Goals are scorer picks plus full duel goals, and POTM goes to the clear top scorer of a match. Friendly results count here too — played, wins, draws, losses and goals — but a friendly win is never a POTM. Ranked by goals, then wins, then win rate, then matches played. Ten players per page.</p>
     <div class="table-wrap" id="psTableWrap">
       <table class="ps-table" aria-label="Player stats and ranking">
-        <thead><tr><th>#</th><th class="team-col">Player</th><th class="team-col">Team</th><th>Played</th><th>W</th><th>D</th><th>L</th><th>Goals</th><th>POTM</th><th>Win rate</th></tr></thead>
+        <thead><tr><th>Rank</th><th class="team-col">Player</th><th>Played</th><th>W</th><th>D</th><th>GD</th><th>Goals</th><th>POTM</th><th>Win rate</th></tr></thead>
         <tbody id="psBody"></tbody>
       </table>
     </div>
@@ -1430,7 +1431,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-22-1821-friendly-talha-1-1-siemon";
+  var LL_DEPLOY_ID = "2026-11-22-2040-player-table-rank-gd";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Two published friendly results, both played 21 Nov 2026, in
@@ -1679,7 +1680,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   function computePlayerStats(){
     var pickCounts=scorerPickCountsMap();
     var list=(state.players||[]).map(function(p){
-      var played=0, wins=0, draws=0, losses=0, potm=0, goalsDuel=0;
+      var played=0, wins=0, draws=0, losses=0, potm=0, goalsDuel=0, gfTot=0, gaTot=0;
       allMatches().forEach(function(m){
         ensureScorers(m); ensureDuels(m);
         goalsDuel+=duelGoalsFor(p,m);
@@ -1709,11 +1710,12 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         if(ds.played>0){ gf=isHome? ds.h : ds.a; ga=isHome? ds.a : ds.h; }
         else { gf=isHome? +m.homeGoals : +m.awayGoals; ga=isHome? +m.awayGoals : +m.homeGoals; }
         if(gf>ga) wins++; else if(gf<ga) losses++; else draws++;
+        gfTot+=gf; gaTot+=ga;
       });
       var t=teamById(p.teamId);
       return { id:p.id, name:p.name, teamId:p.teamId, teamName:t? t.name : "",
         played:played, wins:wins, draws:draws, losses:losses,
-        goals:(pickCounts[p.id]||0)+goalsDuel, potm:potm,
+        goals:(pickCounts[p.id]||0)+goalsDuel, potm:potm, gd:gfTot-gaTot,
         winRate: played>0? Math.round(wins/played*100):0 };
     });
     /* Merge the counted stats into the full squad list: every one
@@ -1735,9 +1737,31 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       var key=psNormName(m.name); inSquad[key]=true;
       if(byName[key]) return byName[key];
       return { id:null, name:m.name, teamId:null, teamName:"",
-        played:0, wins:0, draws:0, losses:0, goals:0, potm:0, winRate:0 };
+        played:0, wins:0, draws:0, losses:0, goals:0, potm:0, gd:0, winRate:0 };
     });
     list.forEach(function(s){ if(!inSquad[psNormName(s.name)] && s.played>0) full.push(s); });
+    /* Friendly results count in Player Stats: each played published
+       friendly adds one Played, a Win / Draw / Loss from the score,
+       the player's goals, and goal difference (goals for minus goals
+       against). A friendly win is NEVER a POTM — Robin's rule, so the
+       winner gets the win but no POTM. Resolved by name, since no
+       players are published here. Never in Top Scorers or the point
+       table — only here. */
+    var byNameFull={};
+    full.forEach(function(s){ byNameFull[psNormName(s.name)]=s; });
+    (state.friendlies||[]).forEach(function(f){
+      if(!friendlyPlayed(f)) return;
+      [[f.p1Name, +f.g1, +f.g2],[f.p2Name, +f.g2, +f.g1]].forEach(function(cfg){
+        var rec=byNameFull[psNormName(cfg[0])]; if(!rec) return;
+        rec.played++;
+        if(cfg[1]>cfg[2]){ rec.wins++; }
+        else if(cfg[1]<cfg[2]){ rec.losses++; }
+        else { rec.draws++; }
+        rec.goals+=cfg[1];
+        rec.gd=(rec.gd||0)+cfg[1]-cfg[2];
+        rec.winRate=rec.played>0? Math.round(rec.wins/rec.played*100):0;
+      });
+    });
     /* Players with real stats rank first, in the main app's order;
        everyone else follows in the fixed seeded random order of the
        whole squad, so their relative order never changes when
@@ -2172,8 +2196,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       var tr=document.createElement("tr"); if(s.rank===1) tr.className="gs-first";
       tr.innerHTML='<td class="pos">'+s.rank+'</td>'
         +'<td class="player-col"><span class="gs-player">'+playerAvatarHTML(s.name)+'<span>'+(s.rank===1?'👑 ':'')+esc(s.name)+'</span></span></td>'
-        +'<td class="team-col2">'+esc(s.teamName)+'</td>'
-        +'<td>'+s.played+'</td><td>'+s.wins+'</td><td>'+s.draws+'</td><td>'+s.losses+'</td>'
+        +'<td>'+s.played+'</td><td>'+s.wins+'</td><td>'+s.draws+'</td><td>'+(s.gd||0)+'</td>'
         +'<td class="ps-goals">'+s.goals+'</td><td>'+s.potm+'</td><td>'+s.winRate+'%</td>';
       tb.appendChild(tr);
     });
@@ -5377,6 +5400,21 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     }
     return false;
   }
+  /* The score of the played friendly between two players, oriented
+     to (nameA, nameB) — so a request row shows the challenger's
+     goals first. First played match between the pair, same as
+     pairPlayed; a friendly carries no date to match a later
+     rematch to its own request. */
+  function pairResult(nameA, nameB){
+    var list = friendlyData().list;
+    for(var i = 0; i < list.length; i++){
+      var f = list[i];
+      if(!f.played) continue;
+      if(samePerson(f.n1, nameA) && samePerson(f.n2, nameB)) return { g1: f.g1, g2: f.g2 };
+      if(samePerson(f.n1, nameB) && samePerson(f.n2, nameA)) return { g1: f.g2, g2: f.g1 };
+    }
+    return null;
+  }
   function avatarHTML(name){
     var photo = photoFor(name);
     if(!photo){ try{ photo = window.localStorage ? localStorage.getItem("llAvatar:" + name) : null; }catch(e){} }
@@ -5746,11 +5784,17 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     catch(e){ return d.toLocaleTimeString(); }
   }
   function appendPendingGrouped(el, items, cancelFor){
-    var lastKey = null, countEl = null, count = 0;
+    var lastKey = null, countEl = null, pend = 0, done = 0;
+    function setCount(){
+      if(!countEl) return;
+      if(done > 0 && pend === 0) countEl.textContent = done + " completed";
+      else if(pend > 0 && done === 0) countEl.textContent = pend + " pending";
+      else countEl.textContent = pend + " pending · " + done + " completed";
+    }
     items.forEach(function(r){
       var k = dayKey(r.createdMs);
       if(k !== lastKey){
-        lastKey = k; count = 0;
+        lastKey = k; pend = 0; done = 0;
         var head = document.createElement("div");
         head.className = "fc-date-head";
         var lab = document.createElement("span");
@@ -5764,8 +5808,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         head.appendChild(lab); head.appendChild(line); head.appendChild(countEl);
         el.appendChild(head);
       }
-      count++;
-      countEl.textContent = count + " pending";
+      if(pairPlayed(r.fromName, r.toName)) done++; else pend++;
+      setCount();
       el.appendChild(reqRow(r, cancelFor(r)));
     });
   }
@@ -5775,9 +5819,14 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     row.className = "fc-req";
     var main = document.createElement("div");
     main.className = "fc-req-main";
+    var mid = '<span class="fc-req-vs" aria-hidden="true">→</span>';
+    if(played){
+      var res = pairResult(r.fromName, r.toName);
+      if(res) mid = '<span class="fc-req-score">' + esc(res.g1) + " – " + esc(res.g2) + '</span>';
+    }
     main.innerHTML =
       '<span class="fc-side">' + avatarHTML(r.fromName) + '<span>' + esc(r.fromName || "?") + '</span></span>'
-      + '<span class="fc-req-vs" aria-hidden="true">→</span>'
+      + mid
       + '<span class="fc-side right">' + avatarHTML(r.toName) + '<span>' + esc(r.toName || "?") + '</span></span>';
     row.appendChild(main);
     var meta = document.createElement("div");
