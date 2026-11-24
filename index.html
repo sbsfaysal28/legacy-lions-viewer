@@ -1580,7 +1580,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-0233-show-db-error";
+  var LL_DEPLOY_ID = "2026-11-25-0239-register-fix";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7871,47 +7871,62 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     withSignedInUser(function(){
       var col = dbv.collection("knockoutRegistrations");
       var ref = col.doc(myId);
-      /* Re-check the member's own doc right before writing, so a
-         second tap (or a second device) can never make a second
-         registration — the doc id is the member's llc id. */
-      /* One transaction: re-check the member's own doc and pick the
-         random slot from the free slots inside the same transaction,
-         so two members tapping at the same instant can never land
-         on the same slot — Firestore retries the loser with fresh
-         data and it picks again. */
-      return dbv.runTransaction(function(tx){
-        return tx.get(ref).then(function(doc){
-          if(doc && doc.exists){
-            var d = doc.data() || {};
-            return { already: true, slot: d.slot };
+      /* The web SDK's transaction can only read single documents —
+         reading the whole collection inside it throws
+         invalid-argument, so no member could ever register. Read
+         the taken slots OUTSIDE the transaction, then the
+         transaction only re-checks the member's own doc (the doc id
+         is the member's llc id, so a second tap or second device
+         can never make a second registration) and writes it. If two
+         members pick the same free slot at the same instant, the
+         loser's write is refused by the rules and the attempt runs
+         again with fresh data. */
+      var triesLeft = 2;
+      function attempt(){
+        col.get().then(function(snap){
+          var taken = {};
+          snap.forEach(function(dd){ var sd = dd.data() || {}; var s2 = parseInt(sd.slot, 10); if(s2 >= 1 && s2 <= KO_TOTAL) taken[s2] = true; });
+          var freshFree = [];
+          for(var n = 1; n <= KO_TOTAL; n++) if(!taken[n]) freshFree.push(n);
+          if(!freshFree.length){
+            koRegistering = false;
+            koSetMsg("Registration closed — all 32 spots are filled.");
+            renderKnockout();
+            return;
           }
-          return tx.get(col).then(function(snap){
-            var taken = {};
-            snap.forEach(function(dd){ var sd = dd.data() || {}; var s2 = parseInt(sd.slot, 10); if(s2 >= 1 && s2 <= KO_TOTAL) taken[s2] = true; });
-            var freshFree = [];
-            for(var n = 1; n <= KO_TOTAL; n++) if(!taken[n]) freshFree.push(n);
-            if(!freshFree.length) return { full: true };
-            var slot = freshFree[Math.floor(Math.random() * freshFree.length)];
-            tx.set(ref, { userId: myId, name: me, slot: slot, createdAt: serverTs() });
-            return { slot: slot };
+          var slot = freshFree[Math.floor(Math.random() * freshFree.length)];
+          dbv.runTransaction(function(tx){
+            return tx.get(ref).then(function(doc){
+              if(doc && doc.exists){
+                var d = doc.data() || {};
+                return { already: true, slot: d.slot };
+              }
+              tx.set(ref, { userId: myId, name: me, slot: slot, createdAt: serverTs() });
+              return { slot: slot };
+            });
+          }).then(function(res){
+            koRegistering = false;
+            var justRegistered = false;
+            if(res && res.already){ koSetMsg("You're already registered — Slot #" + (res.slot || "?") + ". One registration per player."); }
+            else if(res){ koSetMsg("You're in! Your number is #" + res.slot + " — bracket position #" + res.slot + " of 32."); justRegistered = true; }
+            renderKnockout();
+            /* Fresh registration: jump the member straight to their
+               exact bracket cell (after the fresh render is in the
+               DOM). Only on a real new registration. */
+            if(justRegistered) setTimeout(koLocateMe, 150);
+          }).catch(function(e){
+            if(triesLeft > 0){ triesLeft--; attempt(); return; }
+            koRegistering = false;
+            try{ if(window.console && console.error) console.error("registerMe failed", e); }catch(ce){}
+            koSetMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.");
           });
+        }).catch(function(e){
+          koRegistering = false;
+          try{ if(window.console && console.error) console.error("registerMe read failed", e); }catch(ce){}
+          koSetMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.");
         });
-      }).then(function(res){
-        koRegistering = false;
-        var justRegistered = false;
-        if(res && res.already){ koSetMsg("You're already registered — Slot #" + (res.slot || "?") + ". One registration per player."); }
-        else if(res && res.full){ koSetMsg("Registration closed — all 32 spots are filled."); }
-        else if(res){ koSetMsg("You're in! Your number is #" + res.slot + " — bracket position #" + res.slot + " of 32."); justRegistered = true; }
-        renderKnockout();
-        /* Fresh registration: jump the member straight to their
-           exact bracket cell (after the fresh render is in the
-           DOM). Only on a real new registration. */
-        if(justRegistered) setTimeout(koLocateMe, 150);
-      }).catch(function(e){
-        koRegistering = false;
-        try{ if(window.console && console.error) console.error("registerMe failed", e); }catch(ce){}
-        koSetMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.");
-      });
+      }
+      attempt();
     }, function(){
       koRegistering = false;
       koSetMsg("Could not reach the database — check your connection and try again.");
