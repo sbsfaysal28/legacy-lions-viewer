@@ -1580,7 +1580,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-0200-reg-closes-2659";
+  var LL_DEPLOY_ID = "2026-11-25-0212-db-recovery";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -3334,6 +3334,12 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      window.LL_squadMembers() so the config lives in this one place. */
   var fbAuth = null;
   var fbDb = null;
+  /* (Re)initialise Firebase — runs once when the page loads, and
+     again on demand when the scripts had to be reloaded after a
+     slow first load (see koEnsureDb). fbAuth / fbDb are the same
+     variables the LL_fbAuth / LL_fbDb closures read, so a re-init
+     is picked up by every database action. */
+  window.LL_initFirebase = function(){
   try{
     if(window.firebase && firebase.initializeApp && firebase.auth){
       if(!firebase.apps || !firebase.apps.length){
@@ -3363,6 +3369,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       }
     }
   }catch(e){ fbAuth = null; fbDb = null; }
+  };
+  window.LL_initFirebase();
   window.LL_fbAuth = function(){ return fbAuth; };
   window.LL_fbDb = function(){ return fbDb; };
   window.LL_emailFor = function(canonical){ return SQUAD_EMAIL[canonical] || null; };
@@ -7641,6 +7649,42 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   /* One player submits the full score — no waiting for the other
      player. The score is stored normalised to player A's side, in
      one transaction, so a decided match can never be re-opened. */
+  /* Database recovery — the Firebase scripts load from Google's CDN
+     when the page opens; on a slow connection one of them can fail,
+     and then fbDb() is null even though the app still looks logged
+     in (the login is remembered on the device). Instead of failing
+     the tap, load whichever scripts are missing and re-initialise
+     Firebase, then carry on. */
+  function koEnsureDb(ok, fail){
+    var dbv = null;
+    try{ dbv = fbDb(); }catch(e){}
+    if(dbv){ ok(dbv); return; }
+    function afterLoad(){
+      try{ if(window.LL_initFirebase) window.LL_initFirebase(); }catch(e){}
+      var db2 = null;
+      try{ db2 = fbDb(); }catch(e2){}
+      if(db2) ok(db2); else fail();
+    }
+    var urls = [
+      "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js",
+      "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js",
+      "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"
+    ];
+    var need = [];
+    if(!(window.firebase && firebase.initializeApp)) need.push(urls[0]);
+    if(!(window.firebase && firebase.auth)) need.push(urls[1]);
+    if(!(window.firebase && firebase.firestore)) need.push(urls[2]);
+    if(!need.length){ afterLoad(); return; }
+    var i = 0;
+    (function next(){
+      if(i >= need.length){ afterLoad(); return; }
+      var s = document.createElement("script");
+      s.src = need[i++];
+      s.onload = next;
+      s.onerror = fail;
+      document.head.appendChild(s);
+    })();
+  }
   function koSubmitScore(code, gf, ga){
     if(koMsBusy) return;
     var myId = koMyId();
@@ -7653,9 +7697,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var aGa = (myId === t.aId) ? ga : gf;
     var cur = koScoreOf(koMatches[code]);
     if(cur && cur.gf === aGf && cur.ga === aGa){ koMsMsg("That score is already submitted."); return; }
-    var dbv = fbDb();
-    if(!dbv){ koMsMsg("Could not reach the database — check your connection and try again."); return; }
     koMsBusy = true;
+    var dbReady = null;
+    try{ dbReady = fbDb(); }catch(e){}
+    if(!dbReady) koMsMsg("Connecting to the database…");
+    koEnsureDb(function(dbv){
     koMsMsg("Submitting…");
     withSignedInUser(function(){
       var ref = dbv.collection("knockoutMatches").doc(code);
@@ -7684,6 +7730,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       koMsBusy = false;
       koMsMsg("Could not reach the database — check your connection and try again.");
     });
+    }, function(){
+      koMsBusy = false;
+      koMsMsg("Could not reach the database — check your connection and try again.");
+    });
   }
 
   /* Either player submits the penalty winner on a drawn match —
@@ -7696,9 +7746,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     if(!t || !t.aId || !t.bId || (t.aId !== myId && t.bId !== myId)){ koMsMsg("This is not your match.", "msPenMsg"); return; }
     if(!koTimerAllowsSubmit(code)){ koMsMsg(koTimerSubmitBlock(code) === "not-started" ? "Submissions open " + koFmtWindowStart(t.matchday) + "." : "The time for this matchday has ended.", "msPenMsg"); return; }
     if(winnerId !== t.aId && winnerId !== t.bId){ koMsMsg("Pick one of the two players.", "msPenMsg"); return; }
-    var dbv = fbDb();
-    if(!dbv){ koMsMsg("Could not reach the database — check your connection and try again.", "msPenMsg"); return; }
     koMsBusy = true;
+    var dbReady = null;
+    try{ dbReady = fbDb(); }catch(e){}
+    if(!dbReady) koMsMsg("Connecting to the database…", "msPenMsg");
+    koEnsureDb(function(dbv){
     koMsMsg("Saving…", "msPenMsg");
     withSignedInUser(function(){
       var ref = dbv.collection("knockoutMatches").doc(code);
@@ -7722,6 +7774,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         koMsBusy = false;
         koMsMsg("Could not reach the database — check your connection and try again.", "msPenMsg");
       });
+    }, function(){
+      koMsBusy = false;
+      koMsMsg("Could not reach the database — check your connection and try again.", "msPenMsg");
+    });
     }, function(){
       koMsBusy = false;
       koMsMsg("Could not reach the database — check your connection and try again.", "msPenMsg");
@@ -7804,9 +7860,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var mine = koMyReg();
     if(mine){ koSetMsg("You're already registered — Slot #" + mine.slot + ". One registration per player."); renderKnockout(); return; }
     if(koRegClosed()){ koSetMsg(koFreeSlots().length === 0 ? "Registration closed — all 32 spots are filled." : "Registration closed — it closed 26 Nov, 4:59 PM."); renderKnockout(); return; }
-    var dbv = fbDb();
-    if(!dbv){ koSetMsg("Could not reach the database — check your connection and try again."); return; }
     koRegistering = true;
+    var dbReady = null;
+    try{ dbReady = fbDb(); }catch(e){}
+    if(!dbReady) koSetMsg("Connecting to the database…");
+    koEnsureDb(function(dbv){
     koSetMsg("Registering you…");
     withSignedInUser(function(){
       var col = dbv.collection("knockoutRegistrations");
@@ -7851,6 +7909,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         koRegistering = false;
         koSetMsg("Could not reach the database — check your connection and try again.");
       });
+    }, function(){
+      koRegistering = false;
+      koSetMsg("Could not reach the database — check your connection and try again.");
+    });
     }, function(){
       koRegistering = false;
       koSetMsg("Could not reach the database — check your connection and try again.");
