@@ -1534,13 +1534,15 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-24-1138-board-purple-ui";
+  var LL_DEPLOY_ID = "2026-11-24-1607-faysal-5-4-siemon";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
-     Three published friendly results, in time order: Is Hd Talha
+     Four published friendly results, in time order: Is Hd Talha
      1-1 Si Emon (21 Nov, 5:34 PM), Is Hd Talha 1-0 Syed Ishtiak
      Ahmed (21 Nov, 5:38 PM), Sbs Faysal Ahmed 1-0 Kowshik barua
-     (22 Nov, 8:56 PM). No teams, players, fixtures, semi-finals
+     (22 Nov, 8:56 PM), Sbs Faysal Ahmed 5-4 Si Emon (24 Nov,
+     submitted 3:46 PM by Sbs Faysal Ahmed, published on deploy).
+     No teams, players, fixtures, semi-finals
      or final published yet.
      This copy is view-only: nothing here can be edited or saved. */
   var PUBLISHED = {
@@ -1550,7 +1552,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     fixtures: [],
     semis: [],
     final: null,
-    friendlies: [{ id: "fr-20261121-002", p1Id: null, p2Id: null, p1Name: "Is Hd Talha", p2Name: "Si Emon", g1: 1, g2: 1 }, { id: "fr-20261121-001", p1Id: null, p2Id: null, p1Name: "Syed Ishtiak Ahmed", p2Name: "Is Hd Talha", g1: 0, g2: 1 }, { id: "fr-20261122-001", p1Id: null, p2Id: null, p1Name: "Sbs Faysal Ahmed", p2Name: "Kowshik barua", g1: 1, g2: 0 }]
+    friendlies: [{ id: "fr-20261121-002", p1Id: null, p2Id: null, p1Name: "Is Hd Talha", p2Name: "Si Emon", g1: 1, g2: 1 }, { id: "fr-20261121-001", p1Id: null, p2Id: null, p1Name: "Syed Ishtiak Ahmed", p2Name: "Is Hd Talha", g1: 0, g2: 1 }, { id: "fr-20261122-001", p1Id: null, p2Id: null, p1Name: "Sbs Faysal Ahmed", p2Name: "Kowshik barua", g1: 1, g2: 0 }, { id: "fr-20261124-001", p1Id: null, p2Id: null, p1Name: "Sbs Faysal Ahmed", p2Name: "Si Emon", g1: 5, g2: 4 }]
   };
   var state = JSON.parse(JSON.stringify(PUBLISHED));
   /* Deploy fingerprint shared with the deploy-notifications script
