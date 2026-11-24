@@ -857,6 +857,38 @@ html.login-done .login-gate{display:none !important}
 .fc-score-row label{flex:1 1 130px;font-weight:600;font-size:14px}
 .fc-score-row input{width:72px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px;text-align:center}
 .fc-score-actions{display:flex;gap:8px;margin-top:10px}
+/* Submit Your Score board — Robin's Friendly Results Submission Board,
+   shown as a modal over the viewer. Every rule is scoped under
+   #scoreBoardModal so the board's light theme never leaks into the
+   dark viewer (in particular the file-input/label/button rules here
+   must not touch the viewer's profile-photo upload or other inputs).
+   The score comes only from the screenshot (OCR); the score boxes
+   are read-only and can never be typed into. */
+#scoreBoardModal{position:fixed;inset:0;z-index:9999;display:none;overflow-y:auto;background:rgba(5,20,12,.72);padding:14px 10px 28px}
+#scoreBoardModal .sb-sheet{max-width:760px;margin:0 auto;background:#f4f6f9;color:#16233a;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+#scoreBoardModal .sb-header{position:relative;background:#0b1e3a;color:#fff;padding:22px 48px 22px 16px;text-align:center;border-bottom:4px solid #d4af37}
+#scoreBoardModal .sb-header h1{margin:0;font-size:22px;letter-spacing:.5px}
+#scoreBoardModal .sb-close{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:18px;font-weight:800;cursor:pointer;padding:0}
+#scoreBoardModal .sb-main{max-width:760px;margin:0 auto;padding:16px}
+#scoreBoardModal .sb-card{background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(11,30,58,.08)}
+#scoreBoardModal .sb-card h2{margin:0 0 10px;font-size:17px;color:#16233a}
+#scoreBoardModal .sb-step{color:#d4af37;font-weight:800;margin-right:6px}
+#scoreBoardModal .sb-hint{color:#5a6b84;font-size:13px;margin:6px 0 0;line-height:1.5}
+#scoreBoardModal label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px;color:#16233a}
+#scoreBoardModal input[type=text],#scoreBoardModal input[type=number],#scoreBoardModal select{width:100%;padding:10px;border:1px solid #cbd5e3;border-radius:8px;font-size:15px;background:#fff;color:#16233a}
+#scoreBoardModal select:disabled{background:#eef1f6;color:#7a879c}
+#scoreBoardModal .sb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#scoreBoardModal .sb-upload{display:block;border:2px dashed #9fb0c9;border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:#33475f;font-weight:400}
+#scoreBoardModal .sb-upload b{color:#0b1e3a}
+#scoreBoardModal input[type=file]{display:none}
+#scoreBoardModal img#preview{max-width:100%;border-radius:10px;margin-top:12px;display:none}
+#scoreBoardModal .sb-primary{display:block;width:100%;cursor:pointer;border:0;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:800;background:#d4af37;color:#1a1400}
+#scoreBoardModal .sb-primary:disabled{opacity:.55;cursor:wait}
+#scoreBoardModal .sb-ghost{display:block;width:100%;margin-top:8px;cursor:pointer;border:0;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:800;background:#e8edf5;color:#0b1e3a}
+#scoreBoardModal #status{font-size:14px;margin-top:10px;min-height:20px;color:#33475f}
+#scoreBoardModal #result{display:none;border:2px solid #d4af37;border-radius:14px;padding:18px;background:#fffdf0;margin-bottom:14px}
+#scoreBoardModal .sb-score{font-size:20px;font-weight:800;margin:8px 0;color:#16233a}
+@media(max-width:480px){ #scoreBoardModal .sb-header h1{font-size:18px} }
 @media(max-width:480px){ .fc-req-vs{width:26px;height:26px;font-size:14px} }
 @media(max-width:480px){ .fc-score{font-size:24px;padding:5px 9px} .fc-side{font-size:14px} }
 
@@ -1385,7 +1417,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       <div class="fc-list" id="fcIncoming"></div>
     </div>
     <h3 class="fc-sub">My challenge requests</h3>
-    <p class="hint">Challenges you sent that are still waiting for the other player to accept, plus your accepted matches — grouped by the day each one was sent, newest first. You can cancel a challenge you sent while it is still waiting to be accepted. Once a challenge is accepted, both of you can submit the score — once one of you submits it, the option goes away for both.</p>
+    <p class="hint">Challenges you sent that are still waiting for the other player to accept, plus your accepted matches — grouped by the day each one was sent, newest first. You can cancel a challenge you sent while it is still waiting to be accepted. Once a challenge is accepted, both of you can submit the score from a screenshot of the scorecard — once one of you submits it, the option goes away for both.</p>
     <div class="fc-list" id="fcRequests"></div>
     <div class="empty" id="fcRequestsEmpty">No challenge requests yet.</div>
     <div class="msg" id="fcReqMsg" role="status"></div>
@@ -1397,6 +1429,59 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     </div>
   </section>
 
+  <!-- SUBMIT YOUR SCORE BOARD — Robin's Friendly Results Submission Board.
+    Opens as a modal when a player taps "Submit Your Score" on an accepted
+    friendly challenge. The creator/opponent dropdowns hold only the two
+    players of that challenge (Robin's file listed a fixed Visca Brothers
+    vs Legacy Lions Club match — that list is NOT used here). The score
+    comes only from the scorecard screenshot (OCR); the score boxes are
+    read-only. Saving writes the score to Firestore (submittedScore on
+    the challenge doc) so Robin sees it in "All challenge requests". -->
+  <div id="scoreBoardModal" role="dialog" aria-modal="true" aria-label="Submit match result" style="display:none">
+    <div class="sb-sheet">
+      <header class="sb-header">
+        <h1>🦁 Legacy Lions Friendly Results Submission Board</h1>
+        <button type="button" class="sb-close" id="scoreBoardClose" aria-label="Close">✕</button>
+      </header>
+      <div class="sb-main">
+        <div class="sb-card">
+          <h2>📝 Submit Match Result</h2>
+          <label for="creatorSelect">Match Room Creator</label>
+          <select id="creatorSelect">
+            <option value="">— Select Match Room Creator —</option>
+          </select>
+          <label for="opponentSelect">Opponent</label>
+          <select id="opponentSelect" disabled>
+            <option value="">— Select Opponent —</option>
+          </select>
+          <p class="sb-hint" id="opponentHint">Select the Match Room Creator first — the other player becomes the Opponent automatically.</p>
+          <label>Final Score (Match Room Creator vs Opponent)</label>
+          <div class="sb-grid2">
+            <div><label for="creatorGoals" id="creatorScoreLabel" style="font-weight:600">Match Room Creator goals *</label><input type="number" id="creatorGoals" min="0" max="30" readonly placeholder="—"></div>
+            <div><label for="opponentGoals" id="opponentScoreLabel" style="font-weight:600">Opponent goals *</label><input type="number" id="opponentGoals" min="0" max="30" readonly placeholder="—"></div>
+          </div>
+          <p class="sb-hint">Score comes only from your screenshot — you cannot type it yourself.</p>
+          <button class="sb-primary" id="manualBtn" type="button">Submit Results</button>
+        </div>
+        <div class="sb-card">
+          <h2><span class="sb-step">1</span> Scorecard Screenshot</h2>
+          <label class="sb-upload" for="file">📷 <b>Tap to choose a screenshot</b><br><span style="font-size:13px">JPG / PNG — it stays on your device, nothing is uploaded to a server</span></label>
+          <input type="file" id="file" accept="image/*">
+          <img id="preview" alt="Scorecard preview">
+        </div>
+        <div class="sb-card">
+          <h2><span class="sb-step">2</span> Read it &amp; get the result</h2>
+          <button class="sb-primary" id="readBtn" type="button" disabled>Submit Your Screenshot</button>
+          <div id="status">Upload a photo first.</div>
+        </div>
+        <div id="result">
+          <p class="sb-score" id="scoreLine">—</p>
+          <button class="sb-primary" id="saveBtn" type="button" style="margin-top:14px">✅ Save this result as Pending</button>
+        </div>
+        <button class="sb-ghost" id="scoreBoardCloseBottom" type="button">Close</button>
+      </div>
+    </div>
+  </div>
   <!-- KNOCKOUT TOURNAMENT — registration only (Season 2 solo knockout).
        No match results and no bracket advancement yet: members tap the
        poster or “Register me” to take one random slot (1–32), saved
@@ -1446,7 +1531,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-24-0838-challenge-replay-fix";
+  var LL_DEPLOY_ID = "2026-11-24-1052-submit-score-board";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Three published friendly results, in time order: Is Hd Talha
@@ -5264,7 +5349,9 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      (collection “challengeRequests”), Robin arranges the match and
      enters the score in the main Tournament Scheduler app, and the
      played result then appears here from the published friendlies.
-     Users never enter scores in the viewer.
+     Members submit a score only from a scorecard screenshot (Submit Your Score
+     on an accepted challenge); Robin still enters the official result in the
+     main app.
      • The gold “Challenge to Friendly” button sits under a member's
        profile in the search profile view (the search script calls
        window.LL_userViewOpened when a profile opens). It is hidden
@@ -6140,60 +6227,190 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       if(db) answerRequest(db.getAttribute("data-decline-id"), "declined", db);
     });
   }
-  /* ---------- Submit Your Score — accepted challenges only ----------
-     Both players see the button on an accepted challenge. Either one
-     can submit the score; the first submission wins and the option
-     disappears for both, because the button only shows while the
-     challenge has no submittedScore. The score is saved on the
-     challenge doc (goals for the "from" player first), so Robin can
-     see it in his All challenge requests list and enter the official
-     result. The Firestore rules only allow this once per challenge. */
+    /* ---------- Submit Your Score — accepted challenges only ----------
+     Tapping "Submit Your Score" opens Robin's Friendly Results
+     Submission Board as a modal (scoreBoardModal). Both players see
+     the button on an accepted challenge; either one can submit the
+     score, the first submission wins and the option disappears for
+     both, because the button only shows while the challenge has no
+     submittedScore. The score comes ONLY from a scorecard screenshot
+     (Tesseract OCR reads the two yellow score boxes) — the score
+     boxes are read-only and nobody can type a score by hand. The
+     OCR library loads lazily from a CDN the first time the board
+     reads a photo (jsDelivr, falling back to unpkg), so the viewer
+     itself stays fast. Saving writes submittedScore {gf, ga, by,
+     byName} on the challenge doc (goals for the "from" player
+     first), so Robin sees it in his All challenge requests list and
+     enters the official result; it also keeps Robin's local Pending
+     copy (localStorage "cobeg_results"). The Firestore rules only
+     allow this once per challenge, on an accepted challenge.
+     Adapted from Robin's board file: the creator/opponent dropdowns
+     hold only the two players of this challenge (his file listed a
+     fixed Visca Brothers vs Legacy Lions Club match — that list is
+     not used here), the score cap is 0–30 to match the viewer and
+     the Firestore rules (his file said 15), and his full-photo
+     parser (parseScorecard) is not transplanted — his own read flow
+     never calls it, it reads the yellow boxes only. */
+  var sbReq = null;       /* the challenge doc being scored */
+  var sbCurrent = null;   /* OCR result {home, away, hg, ag} */
+  var sbWired = false;
+  var sbSide = "home";    /* Match Room Creator is always the home side */
   function showScoreForm(btn, r){
-    var row = btn.closest ? btn.closest(".fc-req") : null;
-    if(!row) return;
-    if(row.querySelector(".fc-score-form")) return;
-    btn.disabled = true;
-    var form = document.createElement("div");
-    form.className = "fc-score-form";
-    form.innerHTML =
-      '<div class="fc-score-row">'
-      + '<label>' + esc(r.fromName || "?") + ' <input type="number" min="0" max="30" inputmode="numeric" data-score-gf></label>'
-      + '<span aria-hidden="true">–</span>'
-      + '<label>' + esc(r.toName || "?") + ' <input type="number" min="0" max="30" inputmode="numeric" data-score-ga></label>'
-      + '</div>'
-      + '<div class="fc-score-actions">'
-      + '<button type="button" class="btn btn-sm btn-gold" data-score-submit>Submit score</button>'
-      + '<button type="button" class="btn btn-sm" data-score-cancel>Cancel</button>'
-      + '</div>';
-    row.appendChild(form);
-    var gfIn = form.querySelector("[data-score-gf]");
-    var gaIn = form.querySelector("[data-score-ga]");
-    if(gfIn) gfIn.focus();
-    var subBtn = form.querySelector("[data-score-submit]");
-    if(subBtn){
-      subBtn.addEventListener("click", function(){
-        var gf = gfIn ? parseInt(gfIn.value, 10) : NaN;
-        var ga = gaIn ? parseInt(gaIn.value, 10) : NaN;
-        if(isNaN(gf) || isNaN(ga) || gf < 0 || gf > 30 || ga < 0 || ga > 30){
-          setReqMsg("Enter both scores (0–30) before submitting.", false);
-          return;
-        }
-        submitScore(r, gf, ga, subBtn);
-      });
-    }
-    var cancelBtn = form.querySelector("[data-score-cancel]");
-    if(cancelBtn){
-      cancelBtn.addEventListener("click", function(){
-        form.remove();
-        btn.disabled = false;
-      });
-    }
+    sbReq = r;
+    sbCurrent = null;
+    sbWireOnce();
+    var modal = $("scoreBoardModal");
+    if(modal && modal.parentNode !== document.body) document.body.appendChild(modal);
+    sbFillSelect($("creatorSelect"), [r.fromName, r.toName], "— Select Match Room Creator —");
+    $("creatorSelect").value = "";
+    var oppSel = $("opponentSelect");
+    oppSel.innerHTML = '<option value="">— Select Opponent —</option>';
+    oppSel.disabled = true;
+    $("opponentHint").textContent = "Select the Match Room Creator first — the other player becomes the Opponent automatically.";
+    $("creatorGoals").value = "";
+    $("opponentGoals").value = "";
+    updateScoreLabels();
+    var fileIn = $("file");
+    if(fileIn) fileIn.value = "";
+    var prev = $("preview");
+    if(prev){ prev.removeAttribute("src"); prev.style.display = "none"; }
+    var res = $("result");
+    if(res) res.style.display = "none";
+    $("status").textContent = "Upload a photo first.";
+    updateReadBtn();
+    if(modal) modal.style.display = "block";
+    try{ document.body.style.overflow = "hidden"; }catch(e){}
   }
-  function submitScore(r, gf, ga, btn){
+  function sbClose(){
+    var modal = $("scoreBoardModal");
+    if(modal) modal.style.display = "none";
+    try{ document.body.style.overflow = ""; }catch(e){}
+    sbReq = null;
+    sbCurrent = null;
+  }
+  function sbWireOnce(){
+    if(sbWired) return;
+    sbWired = true;
+    $("creatorSelect").addEventListener("change", function(){
+      var c = $("creatorSelect").value;
+      if(!c){
+        var oppSel = $("opponentSelect");
+        oppSel.disabled = true;
+        oppSel.innerHTML = '<option value="">— Select Opponent —</option>';
+        $("opponentHint").textContent = "Select the Match Room Creator first — the other player becomes the Opponent automatically.";
+      } else fillOpponent(c);
+      updateScoreLabels();
+    });
+    $("opponentSelect").addEventListener("change", updateScoreLabels);
+    $("file").addEventListener("change", function(e){
+      var f = e.target.files[0];
+      if(!f) return;
+      var url = URL.createObjectURL(f);
+      var prev = $("preview");
+      prev.src = url;
+      prev.style.display = "block";
+      var res = $("result");
+      if(res) res.style.display = "none";
+      sbCurrent = null;
+      $("status").textContent = "Photo loaded: " + f.name + " — tap “Submit Your Screenshot”.";
+      updateReadBtn();
+    });
+    $("readBtn").addEventListener("click", readScorecard);
+    $("manualBtn").addEventListener("click", readScorecard);
+    $("saveBtn").addEventListener("click", sbSave);
+    var closeBtn = $("scoreBoardClose");
+    if(closeBtn) closeBtn.addEventListener("click", sbClose);
+    var closeBottom = $("scoreBoardCloseBottom");
+    if(closeBottom) closeBottom.addEventListener("click", sbClose);
+    var modal = $("scoreBoardModal");
+    if(modal) modal.addEventListener("click", function(e){ if(e.target === modal) sbClose(); });
+    document.addEventListener("keydown", function(e){
+      if(e.key === "Escape"){
+        var m = $("scoreBoardModal");
+        if(m && m.style.display === "block") sbClose();
+      }
+    });
+  }
+  function sbFillSelect(sel, names, blankText){
+    sel.innerHTML = "";
+    var blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = blankText;
+    sel.appendChild(blank);
+    names.forEach(function(n){
+      if(!n) return;
+      var o = document.createElement("option");
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    });
+  }
+  function fillOpponent(exclude){
+    var opp = $("opponentSelect");
+    var names = (sbReq ? [sbReq.fromName, sbReq.toName] : []).filter(function(n){ return n !== exclude; });
+    sbFillSelect(opp, names, "— Select Opponent —");
+    opp.disabled = false;
+    /* Only two players in this match, so the other one is the
+       opponent — auto-select them, no second tap needed. */
+    if(names.length === 1){
+      opp.value = names[0];
+      $("opponentHint").textContent = names[0] + " is the Opponent.";
+    } else {
+      $("opponentHint").textContent = "Now select the Opponent.";
+    }
+    updateScoreLabels();
+  }
+  function updateScoreLabels(){
+    var c = $("creatorSelect").value, o = $("opponentSelect").value;
+    $("creatorScoreLabel").textContent = (c || "Match Room Creator") + " goals *";
+    $("opponentScoreLabel").textContent = (o || "Opponent") + " goals *";
+  }
+  function syncManualGoals(hg, ag){
+    $("creatorGoals").value = hg;
+    $("opponentGoals").value = ag;
+  }
+  function updateReadBtn(){
+    var hasPhoto = !!$("preview").src && $("preview").style.display === "block";
+    $("readBtn").disabled = !(hasPhoto || sbCurrent);
+    if(hasPhoto) $("status").textContent = "Ready — tap “Submit Your Screenshot”.";
+  }
+  function sbLoadSaved(){
+    try{ return JSON.parse(localStorage.getItem("cobeg_results") || "[]"); }catch(e){ return []; }
+  }
+  /* Save the OCR-read score: orient it to from/to (Firestore stores
+     the "from" player's goals first), write it to the challenge doc,
+     and on success also keep Robin's local Pending copy, then close
+     the board. */
+  function sbSave(){
+    if(!sbCurrent || !sbReq) return;
+    var creator = $("creatorSelect").value || sbCurrent.home;
+    var opponent = $("opponentSelect").value || sbCurrent.away;
+    var creatorGoals = $("creatorGoals").value !== "" ? +$("creatorGoals").value : sbCurrent.hg;
+    var opponentGoals = $("opponentGoals").value !== "" ? +$("opponentGoals").value : sbCurrent.ag;
+    if(isNaN(creatorGoals) || isNaN(opponentGoals)) return;
+    var gf, ga;
+    if(creator === sbReq.fromName){ gf = creatorGoals; ga = opponentGoals; }
+    else { gf = opponentGoals; ga = creatorGoals; }
+    var saveBtn = $("saveBtn");
+    submitScore(sbReq, gf, ga, saveBtn, function(){
+      try{
+        var verdict = creatorGoals > opponentGoals ? "Win" : creatorGoals === opponentGoals ? "Draw" : "Loss";
+        var pts = creatorGoals > opponentGoals ? 3 : creatorGoals === opponentGoals ? 1 : 0;
+        var list = sbLoadSaved();
+        list.unshift({when: new Date().toISOString(), side: sbSide, status: "Pending",
+          creator: creator, opponent: opponent, creatorGoals: creatorGoals, opponentGoals: opponentGoals,
+          verdict: verdict, pts: pts, me: creator, opp: opponent, myGoals: creatorGoals, oppGoals: opponentGoals});
+        localStorage.setItem("cobeg_results", JSON.stringify(list));
+      }catch(e){}
+      sbClose();
+    });
+  }
+  function submitScore(r, gf, ga, btn, onSuccess){
     var dbv = fbDb();
     if(!dbv) return;
     var me = currentUser(), mid = idFor(me);
     if(!me || !mid) return;
+    var oldText = btn ? btn.textContent : "";
     if(btn){ btn.disabled = true; btn.textContent = "Submitting…"; }
     withSignedInUser(function(){
       dbv.collection("challengeRequests").doc(r.id).update({
@@ -6203,16 +6420,228 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         setReqMsg("Score submitted — Robin will enter the official result.", true);
         renderRequests();
         refreshChallengeButton();
+        if(onSuccess) onSuccess();
       }).catch(function(){
-        if(btn){ btn.disabled = false; btn.textContent = "Submit score"; }
+        if(btn){ btn.disabled = false; btn.textContent = oldText || "Submit score"; }
         setReqMsg("Could not submit the score — it may already be submitted, or check your connection and try again.", false);
       });
     }, function(){
-      if(btn){ btn.disabled = false; btn.textContent = "Submit score"; }
+      if(btn){ btn.disabled = false; btn.textContent = oldText || "Submit score"; }
       setReqMsg("Submitting needs internet — check your connection and try again.", false);
     });
   }
-
+  /* --- OCR: read the score from the yellow boxes (Robin's board) ---
+     The score numbers are dark blue on bright yellow. Find the two
+     solid yellow rectangles in the score bar, crop each one, make it
+     black on white, and OCR it as a single digit. The bar can be
+     anywhere in the photo: on the old full scorecard it is near the
+     top, on the new cropped score-bar photos it is in the middle —
+     so the whole image height is scanned for the band with the two
+     boxes (the full-width yellow "Full Time" strip is ~100% yellow
+     and is excluded). */
+  function findScoreBoxes(img){
+    var c = document.createElement("canvas");
+    var W = Math.min(img.naturalWidth || img.width, 2048);
+    var scale = W / (img.naturalWidth || img.width);
+    var H = Math.round((img.naturalHeight || img.height) * scale);
+    c.width = W; c.height = H;
+    var ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0, W, H);
+    var data = ctx.getImageData(0, 0, W, H).data;
+    var isYellow = function(i){ return data[i] > 200 && data[i+1] > 170 && data[i+2] < 120; };
+    var rows = [];
+    for(var y = 0; y < H; y++){
+      var n = 0;
+      for(var x = 0; x < W; x += 2){ if(isYellow((y*W+x)*4)) n++; }
+      rows.push(n / Math.ceil(W/2));
+    }
+    var runs = []; var start = null;
+    for(var y2 = 0; y2 < H; y2++){
+      if(rows[y2] >= 0.05 && rows[y2] <= 0.70){ if(start === null) start = y2; }
+      else if(start !== null){ runs.push([start, y2-1]); start = null; }
+    }
+    if(start !== null) runs.push([start, H-1]);
+    var mergedRuns = [];
+    for(var ri = 0; ri < runs.length; ri++){
+      var r = runs[ri];
+      if(mergedRuns.length && r[0] - mergedRuns[mergedRuns.length-1][1] <= Math.max(2, H*0.02)) mergedRuns[mergedRuns.length-1][1] = r[1];
+      else mergedRuns.push(r.slice());
+    }
+    var best = null;
+    for(var bi = 0; bi < mergedRuns.length; bi++){
+      var y0 = mergedRuns[bi][0], y1 = mergedRuns[bi][1];
+      var bandH = y1 - y0 + 1;
+      if(bandH < Math.max(12, H*0.03)) continue;
+      var e = Math.max(2, Math.round(bandH*0.15));
+      var solid = [];
+      for(var x2 = 0; x2 < W; x2++){
+        var nTop = 0, nBot = 0, nFull = 0;
+        for(var yy = y0; yy < y0+e; yy++){ if(isYellow((yy*W+x2)*4)) nTop++; }
+        for(var yy2 = y1-e+1; yy2 <= y1; yy2++){ if(isYellow((yy2*W+x2)*4)) nBot++; }
+        for(var yy3 = y0; yy3 <= y1; yy3++){ if(isYellow((yy3*W+x2)*4)) nFull++; }
+        solid.push((nTop > e*0.8 || nBot > e*0.8) && nFull > bandH*0.35);
+      }
+      var groups = []; var s = null;
+      for(var x3 = 0; x3 <= W; x3++){
+        var v = x3 < W ? solid[x3] : false;
+        if(v && s === null) s = x3;
+        if(!v && s !== null){ groups.push([s, x3-1]); s = null; }
+      }
+      var gap = Math.max(10, Math.round(W*0.015));
+      var merged = [];
+      for(var gi = 0; gi < groups.length; gi++){
+        var g = groups[gi];
+        if(merged.length && g[0] - merged[merged.length-1][1] <= gap) merged[merged.length-1][1] = g[1];
+        else merged.push(g.slice());
+      }
+      var wide = merged.filter(function(ab){ return (ab[1]-ab[0]) >= W*0.02 && (ab[1]-ab[0]) <= W*0.14; });
+      for(var i = 0; i < wide.length; i++){
+        for(var j = i+1; j < wide.length; j++){
+          var a1 = wide[i][0], b1 = wide[i][1], a2 = wide[j][0], b2 = wide[j][1];
+          var w1 = b1-a1, w2 = b2-a2, gg = a2-b1;
+          var c1 = (a1+b1)/2/W, c2 = (a2+b2)/2/W;
+          if(!(w1/w2 >= 0.6 && w1/w2 <= 1.6)) continue;
+          if(!(gg >= 0.4*Math.min(w1,w2) && gg <= 2.5*Math.max(w1,w2))) continue;
+          if(!(c1 >= 0.2 && c1 <= 0.8 && c2 >= 0.2 && c2 <= 0.8)) continue;
+          var score = Math.abs(gg-(w1+w2)/2) + Math.abs(w1-w2)*0.5;
+          if(!best || score < best.score) best = {score: score, y0: y0, y1: y1, bandH: bandH, boxes: [[a1,b1],[a2,b2]]};
+        }
+      }
+    }
+    if(!best) return null;
+    var by0 = best.y0, bBandH = best.bandH, boxes = best.boxes;
+    return boxes.map(function(ab){
+      var a = ab[0], b = ab[1];
+      var pad = 2, w = b-a+pad*2, h = bBandH;
+      var oc = document.createElement("canvas");
+      oc.width = w*6; oc.height = h*6;
+      var octx = oc.getContext("2d");
+      octx.drawImage(c, a-pad, by0, w, h, 0, 0, oc.width, oc.height);
+      var d = octx.getImageData(0, 0, oc.width, oc.height);
+      for(var i = 0; i < d.data.length; i += 4){
+        var lum = 0.299*d.data[i] + 0.587*d.data[i+1] + 0.114*d.data[i+2];
+        var vv = lum > 140 ? 255 : 0;
+        d.data[i] = vv; d.data[i+1] = vv; d.data[i+2] = vv; d.data[i+3] = 255;
+      }
+      /* Erase black pixels connected to the crop border (a frame from
+         the pad / dark-blue bar merges with the digit — the digit
+         itself never touches the border). */
+      var W2 = oc.width, H2 = oc.height;
+      var seen = new Uint8Array(W2*H2);
+      var stack = [];
+      for(var sx = 0; sx < W2; sx++){ stack.push(sx); stack.push((H2-1)*W2+sx); }
+      for(var sy = 0; sy < H2; sy++){ stack.push(sy*W2); stack.push(sy*W2+W2-1); }
+      while(stack.length){
+        var p = stack.pop();
+        if(seen[p]) continue;
+        seen[p] = 1;
+        if(d.data[p*4] !== 0) continue;
+        d.data[p*4] = 255; d.data[p*4+1] = 255; d.data[p*4+2] = 255;
+        var px = p % W2, py = (p / W2) | 0;
+        if(px > 0) stack.push(p-1);
+        if(px < W2-1) stack.push(p+1);
+        if(py > 0) stack.push(p-W2);
+        if(py < H2-1) stack.push(p+W2);
+      }
+      octx.putImageData(d, 0, 0);
+      return oc.toDataURL("image/png");
+    });
+  }
+  async function readScoreBoxes(worker, img){
+    var boxes = findScoreBoxes(img);
+    if(!boxes) return null;
+    var digits = [];
+    for(var k = 0; k < boxes.length; k++){
+      var url = boxes[k];
+      var found = null;
+      var psms = ["8", "10", "13", "6"];
+      for(var pi = 0; pi < psms.length; pi++){
+        await worker.setParameters({tessedit_pageseg_mode: psms[pi], tessedit_char_whitelist: "0123456789"});
+        var res = await worker.recognize(url);
+        var m = (res.data.text || "").match(/\d+/);
+        if(m){ found = +m[0]; break; }
+      }
+      if(found === null) return null;
+      digits.push(found);
+    }
+    await worker.setParameters({tessedit_pageseg_mode: "3"});
+    return digits.length === 2 ? {hg: digits[0], ag: digits[1]} : null;
+  }
+  function showResult(r){
+    sbCurrent = r;
+    var myGoals = sbSide === "home" ? r.hg : r.ag;
+    var oppGoals = sbSide === "home" ? r.ag : r.hg;
+    var creatorName = $("creatorSelect").value || r.home;
+    var opponentName = $("opponentSelect").value || r.away;
+    var opp = sbSide === "home" ? opponentName : creatorName;
+    var me = sbSide === "home" ? creatorName : opponentName;
+    var box = $("result");
+    box.style.display = "block";
+    $("scoreLine").textContent = me + " " + myGoals + " – " + oppGoals + " " + opp;
+    syncManualGoals(r.hg, r.ag);
+    $("status").textContent = "Done — score read from your screenshot. Save it as Pending below.";
+    box.scrollIntoView({behavior: "smooth"});
+  }
+  /* Load an extra script tag and wait for it (used for the backup CDN). */
+  function loadScript(src){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = src;
+      var timer = setTimeout(function(){ reject(new Error("script load timed out: " + src)); }, 30000);
+      s.onload = function(){ clearTimeout(timer); resolve(); };
+      s.onerror = function(){ clearTimeout(timer); reject(new Error("script load failed: " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  async function readScorecard(){
+    if(!$("creatorSelect").value){ $("status").textContent = "Select the Match Room Creator first."; return; }
+    if(!$("opponentSelect").value){ $("status").textContent = "Select the Opponent first."; return; }
+    if(!$("preview").src){ $("status").textContent = "Upload a scorecard photo first."; return; }
+    $("readBtn").disabled = true;
+    $("status").textContent = "Reading photo… this can take 10–20 seconds the first time.";
+    var worker = null;
+    try{
+      /* The OCR library loads from a CDN — lazily, on first use.
+         If the first CDN (jsDelivr) fails, fall back to unpkg. */
+      if(typeof Tesseract === "undefined"){
+        $("status").textContent = "OCR library did not load from the first server — trying the backup server…";
+        try{ await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"); }catch(e){ /* try unpkg next */ }
+        if(typeof Tesseract === "undefined"){
+          try{ await loadScript("https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"); }catch(e){ /* fall through to the error below */ }
+        }
+      }
+      if(typeof Tesseract === "undefined") throw new Error("OCR library did not load (Tesseract is not defined)");
+      var lastErr = null;
+      for(var attempt = 0; attempt < 3 && !worker; attempt++){
+        try{ worker = await Tesseract.createWorker("eng"); }
+        catch(e){ lastErr = e; $("status").textContent = "OCR library is loading slowly… trying again."; await new Promise(function(res){ setTimeout(res, 2000); }); }
+      }
+      if(!worker) throw lastErr || new Error("OCR library did not load");
+      /* Score comes ONLY from the two yellow score boxes in the score
+         bar — left box = home score, right box = away score. Nothing
+         else in the photo is read for the score, so stats or other
+         numbers can't confuse it. */
+      $("status").textContent = "Reading the yellow score boxes…";
+      var r = null;
+      var boxScore = null;
+      try{ boxScore = await readScoreBoxes(worker, $("preview")); }catch(e){ boxScore = null; }
+      if(boxScore){
+        r = {home: $("creatorSelect").value, away: $("opponentSelect").value,
+          hg: boxScore.hg, ag: boxScore.ag, poss: null, shots: null, sot: null, passes: null, raw: ""};
+      }
+      if(!r){
+        $("status").textContent = "Could not find a score in the yellow boxes. Upload a clearer screenshot with the yellow score boxes visible and try again. The score cannot be typed by hand.";
+        await worker.terminate(); worker = null;
+        $("readBtn").disabled = false; return;
+      }
+      await worker.terminate(); worker = null;
+      showResult(r);
+    }catch(err){
+      if(worker){ try{ await worker.terminate(); }catch(e){} }
+      $("status").textContent = "Reading failed (" + err.message + "). Check your internet (the OCR library loads from a CDN) and tap “Submit Your Screenshot” again.";
+    }
+    $("readBtn").disabled = false;
+  }
   /* ---------- The “Challenge to Friendly” button (search profile view) ---------- */
   /* Daily limit (Robin's rule): at most 3 challenges sent per member
      per calendar day. Enforced on send (fresh read) and reflected on
