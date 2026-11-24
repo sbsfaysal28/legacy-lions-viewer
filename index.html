@@ -1580,7 +1580,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-0155-blind-bracket";
+  var LL_DEPLOY_ID = "2026-11-25-0200-reg-closes-2659";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -6850,6 +6850,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      yet, wait until the end of timeout." Once open, registration
      stays open until all 32 spots fill. */
   var KO_REGISTRATION_OPENS = "2026-11-24T23:59:00+06:00";
+  /* Registration closes 26 Nov 2026, 4:59 PM (Dhaka time) — one
+     minute before Matchday 1 starts at 5:00 PM — or when all 32
+     spots fill, whichever comes first. */
+  var KO_REGISTRATION_CLOSES = "2026-11-26T16:59:00+06:00";
   var koRegs = [];
   var koStarted = false, koUnsub = null, koAuthWait = false, koFailed = false;
   var koRegistering = false;
@@ -7205,7 +7209,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       } else if(mine){
         btn.disabled = true;
         btn.textContent = "Registered — Slot #" + mine.slot;
-      } else if(filled >= KO_TOTAL){
+      } else if(regClosed){
         btn.disabled = true;
         btn.textContent = "Registration closed";
       } else {
@@ -7346,8 +7350,15 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      bracket is blind: a member sees only their own cell, and every
      other filled slot is hidden, so nobody can tell who their
      opponent is or which spot they took. */
+  function koRegistrationClosesAt(){
+    var t = Date.parse(KO_REGISTRATION_CLOSES);
+    return isNaN(t) ? null : t;
+  }
+  var koRegCloseRendered = false;
   function koRegClosed(){
-    return koRegs.length >= KO_TOTAL;
+    if(koRegs.length >= KO_TOTAL) return true;
+    var t = koRegistrationClosesAt();
+    return t !== null && Date.now() >= t;
   }
   /* Style 104 — Arcade Neon timer: black card, big monospace clock,
      pink/cyan digit groups, DAYS : HRS : MIN : SEC labels. Only this
@@ -7356,8 +7367,25 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var el = $("koRegTimer"); if(!el) return;
     var t = koRegistrationOpensAt();
     if(t === null || Date.now() >= t){
-      el.innerHTML = '<span class="ko-t104-open">REGISTRATION OPEN</span>';
-      el.classList.add("is-open");
+      /* Open — count down to the 26 Nov, 4:59 PM close, then show CLOSED. */
+      var c = koRegistrationClosesAt();
+      if(c !== null && Date.now() < c){
+        el.classList.add("is-open");
+        el.innerHTML = '<span class="ko-t104-label">REGISTRATION CLOSES IN</span>'
+          + '<span class="ko-t104-clock">' + koClock104(c - Date.now()) + '</span>'
+          + '<span class="ko-t104-units">DAYS : HRS : MIN : SEC</span>';
+      } else if(c !== null){
+        el.innerHTML = '<span class="ko-t104-open">REGISTRATION CLOSED</span>';
+        el.classList.remove("is-open");
+      } else {
+        el.innerHTML = '<span class="ko-t104-open">REGISTRATION OPEN</span>';
+        el.classList.add("is-open");
+      }
+      /* Crossing the closing time reveals the bracket — re-render once. */
+      if(koRegClosed() && !koRegCloseRendered){
+        koRegCloseRendered = true;
+        setTimeout(renderKnockout, 0);
+      }
       return;
     }
     el.classList.remove("is-open");
@@ -7775,7 +7803,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     if(!myId){ koSetMsg("Could not work out your player id — please try again."); return; }
     var mine = koMyReg();
     if(mine){ koSetMsg("You're already registered — Slot #" + mine.slot + ". One registration per player."); renderKnockout(); return; }
-    if(koFreeSlots().length === 0){ koSetMsg("Registration closed — all 32 spots are filled."); renderKnockout(); return; }
+    if(koRegClosed()){ koSetMsg(koFreeSlots().length === 0 ? "Registration closed — all 32 spots are filled." : "Registration closed — it closed 26 Nov, 4:59 PM."); renderKnockout(); return; }
     var dbv = fbDb();
     if(!dbv){ koSetMsg("Could not reach the database — check your connection and try again."); return; }
     koRegistering = true;
