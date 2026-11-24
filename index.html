@@ -847,6 +847,16 @@ html.login-done .login-gate{display:none !important}
 .fc-status.played{background:var(--accent);border-color:var(--accent);color:#fff}
 .fc-req-score{font-size:18px;font-weight:800;color:var(--gold);white-space:nowrap;text-align:center}
 .fc-cancel{min-height:38px;margin-left:auto}
+.fc-accept{margin-left:auto;min-height:38px}
+.fc-decline{min-height:38px}
+.fc-status.accepted{background:#16a34a;border-color:#16a34a;color:#fff}
+.fc-status.submitted{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.fc-submit-score{min-height:38px;margin-left:auto}
+.fc-score-form{margin-top:10px;padding:12px;border:1px solid var(--gold);border-radius:10px;background:var(--gold-bg)}
+.fc-score-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fc-score-row label{flex:1 1 130px;font-weight:600;font-size:14px}
+.fc-score-row input{width:72px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:16px;text-align:center}
+.fc-score-actions{display:flex;gap:8px;margin-top:10px}
 @media(max-width:480px){ .fc-req-vs{width:26px;height:26px;font-size:14px} }
 @media(max-width:480px){ .fc-score{font-size:24px;padding:5px 9px} .fc-side{font-size:14px} }
 
@@ -1364,19 +1374,24 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   <!-- FRIENDLY CHALLENGE -->
   <section class="card screen" id="screen-friendly" aria-labelledby="h-friendly">
     <h2 id="h-friendly"><span class="stepnum">7</span> Friendly challenge</h2>
-    <p class="hint">Your friendly matches and challenge requests. To challenge someone, tap the search icon at the top, find their profile and tap <strong>Challenge to Friendly</strong> — the request goes to Robin, who arranges the match and enters the score in the main app. Played results then appear here. You can send up to 3 challenges per day.</p>
+    <p class="hint">Your friendly matches and challenge requests. To challenge someone, tap the search icon at the top, find their profile and tap <strong>Challenge to Friendly</strong> — the request goes to that player first. Only once they accept it does it become a match, and then Robin arranges it and enters the score in the main app. A challenge nobody has accepted yet is only visible to the player who sent it. Played results appear here. A challenge nobody accepts within 24 hours disappears. You can send up to 3 challenges per day.</p>
     <h3 class="fc-sub">My friendly results</h3>
     <p class="hint">Your last 5 played friendly results, newest first — each with its own downloadable result card.</p>
     <div class="fc-list" id="fcResults"></div>
     <div class="empty" id="fcResultsEmpty">No friendly results yet.</div>
+    <div id="fcIncomingWrap" style="display:none">
+      <h3 class="fc-sub">Challenges waiting for you</h3>
+      <p class="hint">Someone challenged you to a friendly — accept it to make it a match, or decline it. A challenge you have not answered does not count as a match and nobody else can see it. If you do not answer within 24 hours, it disappears.</p>
+      <div class="fc-list" id="fcIncoming"></div>
+    </div>
     <h3 class="fc-sub">My challenge requests</h3>
-    <p class="hint">Challenges you sent and challenges sent to you that are still waiting for Robin to arrange the match — grouped by the day each one was sent, newest first. You can cancel a challenge you sent.</p>
+    <p class="hint">Challenges you sent that are still waiting for the other player to accept, plus your accepted matches — grouped by the day each one was sent, newest first. You can cancel a challenge you sent while it is still waiting to be accepted. Once a challenge is accepted, both of you can submit the score — once one of you submits it, the option goes away for both.</p>
     <div class="fc-list" id="fcRequests"></div>
     <div class="empty" id="fcRequestsEmpty">No challenge requests yet.</div>
     <div class="msg" id="fcReqMsg" role="status"></div>
     <div id="fcAllWrap" style="display:none">
       <h3 class="fc-sub">All challenge requests</h3>
-      <p class="hint">Every pending challenge request from all players — who wants to play whom — grouped by the day each one was sent, newest first.</p>
+      <p class="hint">Every accepted challenge from all players — matches waiting for you to arrange — grouped by the day each one was sent, newest first. Challenges nobody has accepted yet do not show here.</p>
       <div class="fc-list" id="fcAllRequests"></div>
       <div class="empty" id="fcAllEmpty">No pending challenge requests.</div>
     </div>
@@ -1431,7 +1446,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-23-1019-add-rakib-hussain-emon-llc070";
+  var LL_DEPLOY_ID = "2026-11-24-0822-challenge-submit-score";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Three published friendly results, in time order: Is Hd Talha
@@ -5666,23 +5681,63 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       else if(ca instanceof Date) ms = ca.getTime();
       else if(typeof ca === "number") ms = ca;
     }catch(e){}
+    var ss = d.submittedScore || null;
     return {
       id: doc.id,
       from: d.from || "", fromName: d.fromName || "",
       to: d.to || "", toName: d.toName || "",
       status: d.status || "pending",
-      createdMs: ms
+      createdMs: ms,
+      submittedScore: ss ? { gf: (+ss.gf || 0), ga: (+ss.ga || 0), by: ss.by || "", byName: ss.byName || "" } : null
     };
+  }
+  /* A pending challenge expires 24 hours after it was sent if
+     nobody accepted it. Played challenges never expire — a
+     completed match stays. */
+  var CHAL_EXPIRY_MS = 24 * 60 * 60 * 1000;
+  function isChalExpired(r){
+    if(!r || r.status !== "pending") return false;
+    if(!r.createdMs) return false;
+    if(pairPlayed(r.fromName, r.toName)) return false;
+    return (Date.now() - r.createdMs) > CHAL_EXPIRY_MS;
+  }
+  /* Delete expired pending challenges from Firestore. The rules let
+     any signed-in member delete a pending challenge older than 24
+     hours, so the first member to open the app after the deadline
+     clears it for everyone. Best effort — if the delete is refused
+     (rules not published yet) the challenge is already hidden by
+     the filter in applyRequestsSnapshot, so nothing shows. */
+  var chalCleanupTried = {};
+  function cleanupExpiredChallenges(expired){
+    if(!expired.length) return;
+    var dbv = fbDb();
+    if(!dbv) return;
+    expired.forEach(function(r){
+      if(chalCleanupTried[r.id]) return;
+      chalCleanupTried[r.id] = true;
+      try{
+        dbv.collection("challengeRequests").doc(r.id).delete().catch(function(){});
+      }catch(e){}
+    });
   }
   function applyRequestsSnapshot(snap){
     var list = [];
     snap.forEach(function(doc){ list.push(docToRequest(doc)); });
     list.sort(function(a, b){ return (b.createdMs - a.createdMs) || String(b.id).localeCompare(String(a.id)); });
-    requests = list;
+    /* A challenge nobody accepted within 24 hours is expired: it
+       stops counting as a match, so it never renders or notifies,
+       and it is deleted below. Played challenges never expire. */
+    var active = [], expired = [];
+    list.forEach(function(r){
+      if(isChalExpired(r)) expired.push(r); else active.push(r);
+    });
+    requests = active;
     chalFailed = false;
-    notifyIncoming(list);
+    notifyIncoming(active);
+    notifyChallengeDecisions(active);
     renderRequests();
     refreshChallengeButton();
+    cleanupExpiredChallenges(expired);
   }
   function startChallenges(){
     if(chalStarted) return;
@@ -5749,10 +5804,44 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       try{ if(window.localStorage) localStorage.setItem(key, JSON.stringify(seen.slice(-300))); }catch(e){}
     }
   }
+  /* Bell notification for a decision on a challenge I sent — once
+     per request id + decision, remembered per member in this
+     browser. Fires when the opponent accepts or declines, so the
+     sender always hears back. */
+  function notifyChallengeDecisions(list){
+    var me = currentUser(); if(!me) return;
+    var mid = idFor(me); if(!mid) return;
+    var key = "llChalDecisionNotified:" + me;
+    var seen = [];
+    try{
+      var raw = window.localStorage ? localStorage.getItem(key) : null;
+      if(raw){ var parsed = JSON.parse(raw); if(parsed && typeof parsed.length === "number") seen = parsed; }
+    }catch(e){}
+    var seenSet = {};
+    seen.forEach(function(x){ seenSet[x] = true; });
+    var changed = false;
+    list.forEach(function(r){
+      if(r.from !== mid) return;
+      if(r.status !== "accepted" && r.status !== "declined") return;
+      var k = r.id + ":" + r.status;
+      if(seenSet[k]) return;
+      seenSet[k] = true; seen.push(k); changed = true;
+      if(!window.LL_addNotification) return;
+      if(r.status === "accepted") window.LL_addNotification(me, (r.toName || "A player") + " accepted your friendly challenge.");
+      else window.LL_addNotification(me, (r.toName || "A player") + " declined your friendly challenge.");
+    });
+    if(changed){
+      try{ if(window.localStorage) localStorage.setItem(key, JSON.stringify(seen.slice(-300))); }catch(e){}
+    }
+  }
+  /* An open challenge between two players — sent and waiting for
+     the opponent to accept, or accepted and waiting for Robin to
+     arrange it. A declined challenge does not count, so the pair
+     can challenge each other again. */
   function pendingBetween(idA, idB){
     for(var i = 0; i < requests.length; i++){
       var r = requests[i];
-      if(r.status !== "pending") continue;
+      if(r.status !== "pending" && r.status !== "accepted") continue;
       if((r.from === idA && r.to === idB) || (r.from === idB && r.to === idA)) return true;
     }
     return false;
@@ -5786,7 +5875,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     try{ return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
     catch(e){ return d.toLocaleTimeString(); }
   }
-  function appendPendingGrouped(el, items, cancelFor){
+  function appendPendingGrouped(el, items, cancelFor, submitFor){
     var lastKey = null, countEl = null, pend = 0, done = 0;
     function setCount(){
       if(!countEl) return;
@@ -5813,11 +5902,12 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       }
       if(pairPlayed(r.fromName, r.toName)) done++; else pend++;
       setCount();
-      el.appendChild(reqRow(r, cancelFor(r)));
+      el.appendChild(reqRow(r, cancelFor(r), submitFor ? submitFor(r) : false));
     });
   }
-  function reqRow(r, withCancel){
+  function reqRow(r, withCancel, withSubmit){
     var played = pairPlayed(r.fromName, r.toName);
+    var submitted = !played && r.submittedScore;
     var row = document.createElement("div");
     row.className = "fc-req";
     var main = document.createElement("div");
@@ -5826,6 +5916,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     if(played){
       var res = pairResult(r.fromName, r.toName);
       if(res) mid = '<span class="fc-req-score">' + esc(res.g1) + " – " + esc(res.g2) + '</span>';
+    }else if(submitted){
+      mid = '<span class="fc-req-score">' + esc(submitted.gf) + " – " + esc(submitted.ga) + '</span>';
     }
     main.innerHTML =
       '<span class="fc-side">' + avatarHTML(r.fromName) + '<span>' + esc(r.fromName || "?") + '</span></span>'
@@ -5835,8 +5927,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var meta = document.createElement("div");
     meta.className = "fc-req-meta";
     var st = document.createElement("span");
-    st.className = "fc-status" + (played ? " played" : "");
-    st.textContent = played ? "Played" : "Pending";
+    st.className = "fc-status" + (played ? " played" : (submitted ? " submitted" : (r.status === "accepted" ? " accepted" : "")));
+    st.textContent = played ? "Played" : (submitted ? "Score submitted" : (r.status === "accepted" ? "Accepted" : "Waiting for opponent to accept"));
     meta.appendChild(st);
     if(r.createdMs){
       var tm = document.createElement("span");
@@ -5844,7 +5936,13 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       tm.textContent = "Sent " + timeOnly(r.createdMs);
       meta.appendChild(tm);
     }
-    if(withCancel && !played){
+    if(submitted){
+      var by = document.createElement("span");
+      by.className = "fc-req-time";
+      by.textContent = "by " + (r.submittedScore.byName || "a player");
+      meta.appendChild(by);
+    }
+    if(withCancel && !played && !submitted){
       var c = document.createElement("button");
       c.type = "button";
       c.className = "btn btn-sm btn-danger fc-cancel";
@@ -5853,6 +5951,57 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       c.setAttribute("aria-label", "Cancel your challenge to " + (r.toName || "this player"));
       meta.appendChild(c);
     }
+    if(withSubmit && !played && !submitted && r.status === "accepted"){
+      var s = document.createElement("button");
+      s.type = "button";
+      s.className = "btn btn-sm btn-gold fc-submit-score";
+      s.textContent = "Submit Your Score";
+      s.setAttribute("data-submit-score-id", r.id);
+      s.setAttribute("aria-label", "Submit the score for this friendly match");
+      meta.appendChild(s);
+    }
+    row.appendChild(meta);
+    return row;
+  }
+  /* A challenge sent to me that I have not answered yet — face-off
+     row with Accept and Decline. Only I can see it, in "Challenges
+     waiting for you". */
+  function incomingRow(r){
+    var row = document.createElement("div");
+    row.className = "fc-req";
+    var main = document.createElement("div");
+    main.className = "fc-req-main";
+    main.innerHTML =
+      '<span class="fc-side">' + avatarHTML(r.fromName) + '<span>' + esc(r.fromName || "?") + '</span></span>'
+      + '<span class="fc-req-vs" aria-hidden="true">→</span>'
+      + '<span class="fc-side right">' + avatarHTML(r.toName) + '<span>' + esc(r.toName || "?") + '</span></span>';
+    row.appendChild(main);
+    var meta = document.createElement("div");
+    meta.className = "fc-req-meta";
+    var st = document.createElement("span");
+    st.className = "fc-status";
+    st.textContent = "Waiting for your answer";
+    meta.appendChild(st);
+    if(r.createdMs){
+      var tm = document.createElement("span");
+      tm.className = "fc-req-time";
+      tm.textContent = "Sent " + timeOnly(r.createdMs);
+      meta.appendChild(tm);
+    }
+    var a = document.createElement("button");
+    a.type = "button";
+    a.className = "btn btn-sm btn-gold fc-accept";
+    a.textContent = "Accept";
+    a.setAttribute("data-accept-id", r.id);
+    a.setAttribute("aria-label", "Accept the friendly challenge from " + (r.fromName || "this player"));
+    meta.appendChild(a);
+    var d = document.createElement("button");
+    d.type = "button";
+    d.className = "btn btn-sm btn-danger fc-decline";
+    d.textContent = "Decline";
+    d.setAttribute("data-decline-id", r.id);
+    d.setAttribute("aria-label", "Decline the friendly challenge from " + (r.fromName || "this player"));
+    meta.appendChild(d);
     row.appendChild(meta);
     return row;
   }
@@ -5863,13 +6012,38 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   }
   function renderRequests(){
     var me = currentUser(), mid = idFor(me);
+    /* Challenges waiting for me to answer — sent to me, not yet
+       accepted or declined, and not already played (legacy played
+       requests stay "pending" in the data). */
+    var incoming = requests.filter(function(r){
+      if(!mid) return false;
+      if(r.status !== "pending" || r.to !== mid) return false;
+      return !pairPlayed(r.fromName, r.toName);
+    });
+    var incWrap = $("fcIncomingWrap"), incEl = $("fcIncoming");
+    if(incWrap) incWrap.style.display = incoming.length ? "" : "none";
+    if(incEl){
+      incEl.innerHTML = "";
+      incoming.forEach(function(r){ incEl.appendChild(incomingRow(r)); });
+    }
+    /* My challenge requests — only my sent challenges that are
+       still waiting for the opponent to accept, my accepted
+       matches, and my played ones. A challenge sent to me does not
+       appear here until I accept it (it lives in "Challenges
+       waiting for you" above), and nobody else can see a challenge
+       I sent until the opponent accepts it. */
     var listEl = $("fcRequests"), emptyEl = $("fcRequestsEmpty");
     var mine = requests.filter(function(r){
-      return mid && r.status === "pending" && (r.from === mid || r.to === mid);
+      if(!mid) return false;
+      var played = pairPlayed(r.fromName, r.toName);
+      if(played) return (r.from === mid || r.to === mid);
+      if(r.status === "accepted") return (r.from === mid || r.to === mid);
+      if(r.status === "pending") return r.from === mid;
+      return false;
     });
     if(listEl){
       listEl.innerHTML = "";
-      appendPendingGrouped(listEl, mine, function(r){ return r.from === mid; });
+      appendPendingGrouped(listEl, mine, function(r){ return r.from === mid && r.status === "pending"; }, function(r){ return r.status === "accepted" && !r.submittedScore; });
     }
     if(emptyEl){
       emptyEl.style.display = mine.length ? "none" : "block";
@@ -5877,17 +6051,22 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         ? "Could not load challenge requests — check your connection."
         : "No challenge requests yet.";
     }
-    /* Robin only — every pending request from all users. */
+    /* Robin only — accepted challenges from all users (the matches
+       waiting for him to arrange) plus played ones. A challenge
+       nobody has accepted yet is not a match and does not show. */
     var allWrap = $("fcAllWrap");
     if(allWrap){
       var isRobin = mid === "llc-069";
       allWrap.style.display = isRobin ? "" : "none";
       if(isRobin){
-        var all = requests.filter(function(r){ return r.status === "pending"; });
+        var all = requests.filter(function(r){
+          if(pairPlayed(r.fromName, r.toName)) return true;
+          return r.status === "accepted";
+        });
         var allEl = $("fcAllRequests"), allEmpty = $("fcAllEmpty");
         if(allEl){
           allEl.innerHTML = "";
-          appendPendingGrouped(allEl, all, function(){ return false; });
+          appendPendingGrouped(allEl, all, function(){ return false; }, function(){ return false; });
         }
         if(allEmpty) allEmpty.style.display = all.length ? "none" : "block";
       }
@@ -5918,7 +6097,118 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     fcReqList.addEventListener("click", function(e){
       var t = e.target;
       var btn = (t && t.closest) ? t.closest("[data-cancel-id]") : null;
-      if(btn) cancelRequest(btn.getAttribute("data-cancel-id"), btn);
+      if(btn){ cancelRequest(btn.getAttribute("data-cancel-id"), btn); return; }
+      var sb = (t && t.closest) ? t.closest("[data-submit-score-id]") : null;
+      if(sb){
+        var rid = sb.getAttribute("data-submit-score-id");
+        var req = null;
+        requests.forEach(function(x){ if(x.id === rid) req = x; });
+        if(req) showScoreForm(sb, req);
+      }
+    });
+  }
+  /* Answer a challenge sent to me — accept makes it a real match,
+     decline hides it. Only the recipient can do this (the Firestore
+     rules enforce it); the update changes the status field only. */
+  function answerRequest(id, decision, btn){
+    var dbv = fbDb();
+    if(!dbv || !id) return;
+    if(btn){ btn.disabled = true; btn.textContent = decision === "accepted" ? "Accepting…" : "Declining…"; }
+    withSignedInUser(function(){
+      dbv.collection("challengeRequests").doc(id).update({ status: decision }).then(function(){
+        requests.forEach(function(r){ if(r.id === id) r.status = decision; });
+        setReqMsg(decision === "accepted" ? "Challenge accepted — Robin will arrange the match." : "Challenge declined.", true);
+        renderRequests();
+        refreshChallengeButton();
+      }).catch(function(){
+        if(btn){ btn.disabled = false; btn.textContent = decision === "accepted" ? "Accept" : "Decline"; }
+        setReqMsg("Could not answer the challenge — check your connection and try again.", false);
+      });
+    }, function(){
+      if(btn){ btn.disabled = false; btn.textContent = decision === "accepted" ? "Accept" : "Decline"; }
+      setReqMsg("Answering needs internet — check your connection and try again.", false);
+    });
+  }
+  var fcIncList = $("fcIncoming");
+  if(fcIncList){
+    fcIncList.addEventListener("click", function(e){
+      var t = e.target;
+      var ab = (t && t.closest) ? t.closest("[data-accept-id]") : null;
+      if(ab){ answerRequest(ab.getAttribute("data-accept-id"), "accepted", ab); return; }
+      var db = (t && t.closest) ? t.closest("[data-decline-id]") : null;
+      if(db) answerRequest(db.getAttribute("data-decline-id"), "declined", db);
+    });
+  }
+  /* ---------- Submit Your Score — accepted challenges only ----------
+     Both players see the button on an accepted challenge. Either one
+     can submit the score; the first submission wins and the option
+     disappears for both, because the button only shows while the
+     challenge has no submittedScore. The score is saved on the
+     challenge doc (goals for the "from" player first), so Robin can
+     see it in his All challenge requests list and enter the official
+     result. The Firestore rules only allow this once per challenge. */
+  function showScoreForm(btn, r){
+    var row = btn.closest ? btn.closest(".fc-req") : null;
+    if(!row) return;
+    if(row.querySelector(".fc-score-form")) return;
+    btn.disabled = true;
+    var form = document.createElement("div");
+    form.className = "fc-score-form";
+    form.innerHTML =
+      '<div class="fc-score-row">'
+      + '<label>' + esc(r.fromName || "?") + ' <input type="number" min="0" max="30" inputmode="numeric" data-score-gf></label>'
+      + '<span aria-hidden="true">–</span>'
+      + '<label>' + esc(r.toName || "?") + ' <input type="number" min="0" max="30" inputmode="numeric" data-score-ga></label>'
+      + '</div>'
+      + '<div class="fc-score-actions">'
+      + '<button type="button" class="btn btn-sm btn-gold" data-score-submit>Submit score</button>'
+      + '<button type="button" class="btn btn-sm" data-score-cancel>Cancel</button>'
+      + '</div>';
+    row.appendChild(form);
+    var gfIn = form.querySelector("[data-score-gf]");
+    var gaIn = form.querySelector("[data-score-ga]");
+    if(gfIn) gfIn.focus();
+    var subBtn = form.querySelector("[data-score-submit]");
+    if(subBtn){
+      subBtn.addEventListener("click", function(){
+        var gf = gfIn ? parseInt(gfIn.value, 10) : NaN;
+        var ga = gaIn ? parseInt(gaIn.value, 10) : NaN;
+        if(isNaN(gf) || isNaN(ga) || gf < 0 || gf > 30 || ga < 0 || ga > 30){
+          setReqMsg("Enter both scores (0–30) before submitting.", false);
+          return;
+        }
+        submitScore(r, gf, ga, subBtn);
+      });
+    }
+    var cancelBtn = form.querySelector("[data-score-cancel]");
+    if(cancelBtn){
+      cancelBtn.addEventListener("click", function(){
+        form.remove();
+        btn.disabled = false;
+      });
+    }
+  }
+  function submitScore(r, gf, ga, btn){
+    var dbv = fbDb();
+    if(!dbv) return;
+    var me = currentUser(), mid = idFor(me);
+    if(!me || !mid) return;
+    if(btn){ btn.disabled = true; btn.textContent = "Submitting…"; }
+    withSignedInUser(function(){
+      dbv.collection("challengeRequests").doc(r.id).update({
+        submittedScore: { gf: gf, ga: ga, by: mid, byName: me, at: serverTs() }
+      }).then(function(){
+        requests.forEach(function(x){ if(x.id === r.id) x.submittedScore = { gf: gf, ga: ga, by: mid, byName: me }; });
+        setReqMsg("Score submitted — Robin will enter the official result.", true);
+        renderRequests();
+        refreshChallengeButton();
+      }).catch(function(){
+        if(btn){ btn.disabled = false; btn.textContent = "Submit score"; }
+        setReqMsg("Could not submit the score — it may already be submitted, or check your connection and try again.", false);
+      });
+    }, function(){
+      if(btn){ btn.disabled = false; btn.textContent = "Submit score"; }
+      setReqMsg("Submitting needs internet — check your connection and try again.", false);
     });
   }
 
@@ -5991,7 +6281,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
           var dup = false;
           snap.forEach(function(doc){
             var d = doc.data() || {};
-            if(d.status !== "pending") return;
+            if(d.status !== "pending" && d.status !== "accepted") return;
             if((d.from === mid && d.to === tid) || (d.from === tid && d.to === mid)) dup = true;
           });
           if(dup){
@@ -6036,7 +6326,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
             chalBusy = false;
             chalBtn.disabled = true;
             chalBtn.textContent = "Challenge sent";
-            setChalMsg("Challenge sent — Robin will arrange the match.", "ok");
+            setChalMsg("Challenge sent — waiting for " + viewedMember.name + " to accept it.", "ok");
           }).catch(function(){
             chalBusy = false;
             chalBtn.disabled = false;
