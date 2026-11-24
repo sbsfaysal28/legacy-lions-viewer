@@ -1580,7 +1580,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-0212-db-recovery";
+  var LL_DEPLOY_ID = "2026-11-25-0233-show-db-error";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7722,9 +7722,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         msDraft = null;
         koMsMsg("Score submitted.");
         renderKnockout();
-      }).catch(function(){
+      }).catch(function(e){
         koMsBusy = false;
-        koMsMsg("Could not reach the database — check your connection and try again.");
+        try{ if(window.console && console.error) console.error("koSubmitScore failed", e); }catch(ce){}
+        koMsMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.");
       });
     }, function(){
       koMsBusy = false;
@@ -7770,9 +7771,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         if(r && r.blocked){ koMsMsg(r.blocked === "not-started" ? "Submissions open " + koFmtWindowStart(t.matchday) + "." : "The time for this matchday has ended.", "msPenMsg"); renderKnockout(); return; }
         koMsMsg("Penalty winner saved.", "msPenMsg");
         renderKnockout();
-      }).catch(function(){
+      }).catch(function(e){
         koMsBusy = false;
-        koMsMsg("Could not reach the database — check your connection and try again.", "msPenMsg");
+        try{ if(window.console && console.error) console.error("koSubmitPen failed", e); }catch(ce){}
+        koMsMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.", "msPenMsg");
       });
     }, function(){
       koMsBusy = false;
@@ -7905,9 +7907,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
            exact bracket cell (after the fresh render is in the
            DOM). Only on a real new registration. */
         if(justRegistered) setTimeout(koLocateMe, 150);
-      }).catch(function(){
+      }).catch(function(e){
         koRegistering = false;
-        koSetMsg("Could not reach the database — check your connection and try again.");
+        try{ if(window.console && console.error) console.error("registerMe failed", e); }catch(ce){}
+        koSetMsg("Could not reach the database (" + (e && e.code ? e.code : "unknown") + ") — check your connection and try again.");
       });
     }, function(){
       koRegistering = false;
