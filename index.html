@@ -1446,7 +1446,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-24-0822-challenge-submit-score";
+  var LL_DEPLOY_ID = "2026-11-24-0838-challenge-replay-fix";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Three published friendly results, in time order: Is Hd Talha
@@ -5836,12 +5836,13 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   }
   /* An open challenge between two players — sent and waiting for
      the opponent to accept, or accepted and waiting for Robin to
-     arrange it. A declined challenge does not count, so the pair
-     can challenge each other again. */
+     arrange it. A declined or already-played challenge does not
+     count, so the pair can challenge each other again. */
   function pendingBetween(idA, idB){
     for(var i = 0; i < requests.length; i++){
       var r = requests[i];
       if(r.status !== "pending" && r.status !== "accepted") continue;
+      if(pairPlayed(r.fromName, r.toName)) continue; /* already played — the pair can challenge again */
       if((r.from === idA && r.to === idB) || (r.from === idB && r.to === idA)) return true;
     }
     return false;
@@ -6282,6 +6283,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
           snap.forEach(function(doc){
             var d = doc.data() || {};
             if(d.status !== "pending" && d.status !== "accepted") return;
+            if(pairPlayed(d.fromName, d.toName)) return; /* already played — the pair can challenge again */
             if((d.from === mid && d.to === tid) || (d.from === tid && d.to === mid)) dup = true;
           });
           if(dup){
