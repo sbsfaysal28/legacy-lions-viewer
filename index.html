@@ -859,35 +859,38 @@ html.login-done .login-gate{display:none !important}
 .fc-score-actions{display:flex;gap:8px;margin-top:10px}
 /* Submit Your Score board — Robin's Friendly Results Submission Board,
    shown as a modal over the viewer. Every rule is scoped under
-   #scoreBoardModal so the board's light theme never leaks into the
-   dark viewer (in particular the file-input/label/button rules here
+   #scoreBoardModal so the board's theme never leaks into the dark
+   viewer (in particular the file-input/label/button rules here
    must not touch the viewer's profile-photo upload or other inputs).
-   The score comes only from the screenshot (OCR); the score boxes
-   are read-only and can never be typed into. */
+   v8 style (2026-11-24): purple gradient UI — mauve-purple gradient
+   background, clean white sans-serif text, soft translucent white
+   cards and white buttons with purple text. The score comes only
+   from the screenshot (OCR); the score boxes are read-only and can
+   never be typed into. */
 #scoreBoardModal{position:fixed;inset:0;z-index:9999;display:none;overflow-y:auto;background:rgba(5,20,12,.72);padding:14px 10px 28px}
-#scoreBoardModal .sb-sheet{max-width:760px;margin:0 auto;background:#f4f6f9;color:#16233a;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-#scoreBoardModal .sb-header{position:relative;background:#0b1e3a;color:#fff;padding:22px 48px 22px 16px;text-align:center;border-bottom:4px solid #d4af37}
-#scoreBoardModal .sb-header h1{margin:0;font-size:22px;letter-spacing:.5px}
+#scoreBoardModal .sb-sheet{max-width:760px;margin:0 auto;background:linear-gradient(180deg,#8e5a9e 0%,#7b4a8c 45%,#5e2f6e 100%);color:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45);font-size:14px;line-height:1.6}
+#scoreBoardModal .sb-header{position:relative;background:transparent;color:#fff;padding:24px 48px 16px 16px;text-align:center}
+#scoreBoardModal .sb-header h1{margin:0;font-size:22px;letter-spacing:.5px;line-height:1.4;font-weight:800}
 #scoreBoardModal .sb-close{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:18px;font-weight:800;cursor:pointer;padding:0}
 #scoreBoardModal .sb-main{max-width:760px;margin:0 auto;padding:16px}
-#scoreBoardModal .sb-card{background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(11,30,58,.08)}
-#scoreBoardModal .sb-card h2{margin:0 0 10px;font-size:17px;color:#16233a}
-#scoreBoardModal .sb-step{color:#d4af37;font-weight:800;margin-right:6px}
-#scoreBoardModal .sb-hint{color:#5a6b84;font-size:13px;margin:6px 0 0;line-height:1.5}
-#scoreBoardModal label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px;color:#16233a}
-#scoreBoardModal input[type=text],#scoreBoardModal input[type=number],#scoreBoardModal select{width:100%;padding:10px;border:1px solid #cbd5e3;border-radius:8px;font-size:15px;background:#fff;color:#16233a}
+#scoreBoardModal .sb-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+#scoreBoardModal .sb-card h2{margin:0 0 10px;font-size:17px;color:#fff}
+#scoreBoardModal .sb-step{color:#fff;font-weight:800;margin-right:6px}
+#scoreBoardModal .sb-hint{color:#f3e8f5;font-size:13px;margin:6px 0 0;line-height:1.5}
+#scoreBoardModal label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px;color:#fff}
+#scoreBoardModal input[type=text],#scoreBoardModal input[type=number],#scoreBoardModal select{width:100%;padding:12px;border:1px solid rgba(255,255,255,.5);border-radius:10px;font-size:15px;background:#fff;color:#16233a;font-family:inherit}
 #scoreBoardModal select:disabled{background:#eef1f6;color:#7a879c}
 #scoreBoardModal .sb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#scoreBoardModal .sb-upload{display:block;border:2px dashed #9fb0c9;border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:#33475f;font-weight:400}
-#scoreBoardModal .sb-upload b{color:#0b1e3a}
+#scoreBoardModal .sb-upload{display:block;border:2px dashed rgba(255,255,255,.7);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:#fff;background:rgba(255,255,255,.08);font-weight:400}
+#scoreBoardModal .sb-upload b{color:#fff}
 #scoreBoardModal input[type=file]{display:none}
-#scoreBoardModal img#preview{max-width:100%;border-radius:10px;margin-top:12px;display:none}
-#scoreBoardModal .sb-primary{display:block;width:100%;cursor:pointer;border:0;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:800;background:#d4af37;color:#1a1400}
+#scoreBoardModal img#preview{max-width:100%;border-radius:10px;margin-top:12px;display:none;border:2px solid rgba(255,255,255,.5)}
+#scoreBoardModal .sb-primary{display:block;width:100%;cursor:pointer;border:0;border-radius:12px;padding:13px 18px;font-size:16px;font-weight:800;background:#fff;color:#5e2f6e;font-family:inherit}
 #scoreBoardModal .sb-primary:disabled{opacity:.55;cursor:wait}
-#scoreBoardModal .sb-ghost{display:block;width:100%;margin-top:8px;cursor:pointer;border:0;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:800;background:#e8edf5;color:#0b1e3a}
-#scoreBoardModal #status{font-size:14px;margin-top:10px;min-height:20px;color:#33475f}
-#scoreBoardModal #result{display:none;border:2px solid #d4af37;border-radius:14px;padding:18px;background:#fffdf0;margin-bottom:14px}
-#scoreBoardModal .sb-score{font-size:20px;font-weight:800;margin:8px 0;color:#16233a}
+#scoreBoardModal .sb-ghost{display:block;width:100%;margin-top:8px;cursor:pointer;border:0;border-radius:12px;padding:13px 18px;font-size:16px;font-weight:800;background:rgba(255,255,255,.2);color:#fff;font-family:inherit}
+#scoreBoardModal #status{font-size:14px;margin-top:10px;min-height:20px;color:#f3e8f5}
+#scoreBoardModal #result{display:none;border:1px solid rgba(255,255,255,.5);border-radius:16px;padding:18px;background:rgba(255,255,255,.14);margin-bottom:14px}
+#scoreBoardModal .sb-score{font-size:20px;font-weight:800;margin:8px 0;color:#fff}
 @media(max-width:480px){ #scoreBoardModal .sb-header h1{font-size:18px} }
 @media(max-width:480px){ .fc-req-vs{width:26px;height:26px;font-size:14px} }
 @media(max-width:480px){ .fc-score{font-size:24px;padding:5px 9px} .fc-side{font-size:14px} }
@@ -1531,7 +1534,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-24-1052-submit-score-board";
+  var LL_DEPLOY_ID = "2026-11-24-1138-board-purple-ui";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Three published friendly results, in time order: Is Hd Talha
