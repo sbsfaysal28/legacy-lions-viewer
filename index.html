@@ -1584,7 +1584,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-1150-messenger-btn";
+  var LL_DEPLOY_ID = "2026-11-25-1200-messenger-app";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7952,9 +7952,16 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       koSetMsg("Could not reach the database — check your connection and try again.");
     });
   }
-  /* Messenger group link for the Join Messenger Group button —
-     empty until Robin gives the link. */
+  /* Messenger group link for the Join Messenger Group button.
+     MESSENGER_GROUP_URL is the web invite link. MESSENGER_GROUP_INTENT
+     is the Android intent version of the same link: on Android it
+     opens the Messenger app directly (package com.facebook.orca)
+     instead of landing on the Facebook web login, and falls back to
+     the web link when Messenger is not installed. Non-Android
+     devices use the web link (on iOS it opens the Messenger app
+     through the m.me universal link). */
   var MESSENGER_GROUP_URL = "https://m.me/j/Qm-XHvMwt6uxPDGs/?send_source=gc%3Acopy_invite_link_t";
+  var MESSENGER_GROUP_INTENT = "intent://j/Qm-XHvMwt6uxPDGs/?send_source=gc%3Acopy_invite_link_t#Intent;scheme=https;package=com.facebook.orca;S.browser_fallback_url=https%3A%2F%2Fm.me%2Fj%2FQm-XHvMwt6uxPDGs%2F%3Fsend_source%3Dgc%253Acopy_invite_link_t;end";
   /* Poster banner on the Fixtures screen opens this section. */
   (function(){
     var banner = $("koBanner");
@@ -7969,6 +7976,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
        tab. Until then it says the link is coming soon. */
     var msgrBtn = $("msMessengerBtn");
     if(msgrBtn) msgrBtn.addEventListener("click", function(){
+      /* Android: open the Messenger app itself through the intent
+         link (a plain m.me link would land on the Facebook web
+         login instead). Other devices: the m.me web link. */
+      var isAndroid = /Android/i.test(navigator.userAgent || "");
+      if(isAndroid && MESSENGER_GROUP_INTENT){ window.location.href = MESSENGER_GROUP_INTENT; return; }
       if(MESSENGER_GROUP_URL){ window.open(MESSENGER_GROUP_URL, "_blank", "noopener"); return; }
       koMsMsg("Messenger group link coming soon.", "msMessengerMsg");
     });
