@@ -1584,7 +1584,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-1200-messenger-app";
+  var LL_DEPLOY_ID = "2026-11-25-1208-hide-submit-box";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7254,6 +7254,9 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      The windows live in KO_TIMER_WINDOWS above; matchdays 2–5 are
      still null until Robin provides their windows. */
   var koTimerIv = null;
+  /* Submit-box reveal: which matchday the reveal flag belongs
+     to, and whether the box has been revealed for it. */
+  var msBoxRevealMd = null, msBoxRevealed = false;
   /* One matchday's window as {start, end} in ms, or null when the
      matchday has no window set (or a bad one). */
   function koTimerWindow(md){
@@ -7333,6 +7336,14 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var w = koTimerWindow(cur.matchday);
     if(!w){ box.innerHTML = '<span class="ko-t104-open">' + label + ' · Timer not set yet</span>'; return; }
     var now = Date.now();
+    /* When the current matchday's window opens, the Submit Score
+       box appears — re-render the schedule once at that moment.
+       The timer tick never re-renders otherwise, so typing in the
+       box is never wiped. The flag is set before re-rendering, so
+       the nested koUpdateTimer call inside renderMySchedule cannot
+       loop back here. */
+    if(msBoxRevealMd !== cur.matchday){ msBoxRevealMd = cur.matchday; msBoxRevealed = false; }
+    if(!msBoxRevealed && now >= w.start){ msBoxRevealed = true; renderMySchedule(); }
     if(now < w.start){
       box.innerHTML = '<span class="ko-t104-label">' + label + ' · Starts in</span>'
         + '<span class="ko-t104-clock">' + koClock104(w.start - now) + '</span>'
@@ -7575,6 +7586,13 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     if(oppId){
       h += '<div class="ms-submit">';
       h += '<p class="ms-submit-title">Submit Score</p>';
+      /* The box stays hidden until the matchday window opens — a
+         submit before then is blocked anyway, so the box is not
+         shown at all. Same gate as the submit functions: a score
+         submitted in time still keeps it open after the window
+         ends, for a correction or the penalty winner. */
+      var blk = koTimerSubmitBlock(c.code);
+      if(!blk){
       h += msStateLine(t, myId, myName);
       /* One player submits the full score — no waiting for the
          other player. While the score is a draw, the box stays so
@@ -7603,6 +7621,11 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
           + '</div>';
         h += '<p class="ms-submit-msg" id="msPenMsg"></p>';
         h += '</div>';
+      }
+      } else if(blk === "not-started"){
+        h += '<p class="ms-submit-note">Submissions open ' + esc(koFmtWindowStart(t.matchday)) + '.</p>';
+      } else {
+        h += '<p class="ms-submit-note">The time for this matchday has ended.</p>';
       }
       h += '</div>';
     }
