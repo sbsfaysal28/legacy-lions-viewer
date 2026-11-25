@@ -1170,7 +1170,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   </div>
 </div>
 <!-- User search panel — opened by tapping the magnifier in the header.
-     Lists all 71 Legacy Lions squad members with their photo (or
+     Lists all 72 Legacy Lions squad members with their photo (or
      first-letter circle), name and squad group; the input at the top
      filters the list as you type, and tapping a member opens their
      profile view (see the search script at the end of the page). -->
@@ -1443,7 +1443,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       <div class="mr-id">
         <p class="mr-name" id="myRankName">My ranking</p>
         <p class="mr-group" id="myRankGroup"></p>
-        <p class="mr-rank" id="myRankRank">Rank #– of 71</p>
+        <p class="mr-rank" id="myRankRank">Rank #– of 72</p>
         <p class="mr-note" id="myRankNote" style="display:none">No matches played yet — the order is random for now.</p>
       </div>
     </div>
@@ -1584,7 +1584,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-1208-hide-submit-box";
+  var LL_DEPLOY_ID = "2026-11-25-1936-add-hm-al-mamun";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -1771,7 +1771,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      - Win rate = round(Wins / Played × 100).
      Ranking order is the main app's: goals, then wins, then win
      rate, then played, then name.
-     The ranking lists ALL 71 Legacy Lions squad members (from
+     The ranking lists ALL 72 Legacy Lions squad members (from
      window.LL_squadMembers, defined by the login script), not only
      players who took part in a match: a member's real counted stats
      are matched in by name, and a member with no counted match keeps
@@ -1875,7 +1875,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         winRate: played>0? Math.round(wins/played*100):0 };
     });
     /* Merge the counted stats into the full squad list: every one
-       of the 71 squad members is always listed. A member's counted
+       of the 72 squad members is always listed. A member's counted
        entry is matched by name; a member with no counted match gets
        real zero stats. (A published player who is not a squad
        member is kept only when they have actually played.) When the
@@ -2301,7 +2301,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     $("scorersEmpty").style.display = scorers.length? "none":"block";
   }
 
-  /* Player Stats & Ranking — all 71 squad members ranked (see
+  /* Player Stats & Ranking — all 72 squad members ranked (see
      computePlayerStats), 10 per page with Previous / Next paging.
      psPage is display-only state, held in memory like the Matchday
      Centre's open day. */
@@ -2316,7 +2316,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       /* The squad list comes from the login script, which runs
          after this one — on the very first render it may not exist
          yet. Hide the table and render again once the page has
-         fully loaded; by then all 71 members are known. */
+         fully loaded; by then all 72 members are known. */
       tb.innerHTML="";
       if(wrap) wrap.style.display="none";
       if(pager) pager.style.display="none";
@@ -3197,7 +3197,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   "use strict";
   /* ---- Login gate — Legacy Lions squad members only ----
      The viewer opens locked, exactly like the main app. The only way
-     in is the name of one of the 71 Legacy Lions squad members
+     in is the name of one of the 72 Legacy Lions squad members
      (collected from the club's COBEG squad page — Main Team, Academy
      Team, Youth Team and Club Legends, spellings kept exactly as
      listed there) together with that member's password. There is NO
@@ -3241,7 +3241,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     /* Main Team */
     "Ahnaf Bhuiyan","AR Antor (Antor Roy)","Ariful Islam","Bayejid Hossain","Ibrahim Samin","Jayed Ahmed Sami","JUBAID SHAHRIA","Krishna Sarkar","Md Fahim Omam","Md. Tamim Hossain","Mehrab Hossain Polash","Muntasi R","Niyamul Chowdhury","Rahat khan","Raisul Islam Fahim","Ro Ha N","Sadman Prodhan","Safin Samee","Shahed mhamud","Shuaibe Hasan Fahim","Si Emon","Yameen Hossen Sabbir","শাহপরান হোসেন সাকিব","সামিন শাফায়াত",
     /* Academy Team */
-    "Abdullah Al Sakib","Adinul islam","AI Saim","Alvid Shamim","Fahad Islam Bayzid","Farhan Sadik Suvo","Istehadul Islam Pranto","Jubaer hosen","Koushik Das","Kowshik barua","M S Rana","Mahin rahman","Mehedi Hassan Saikot","Mehrab Hossain","Mezanur Raham","Mohammad Likhon","Riadul islam emon","Sajed Alam","Shafin","Sheetal barua","Syed Ishtiak Ahmed","TA SI N","Taimul Haque","Zobayer alam","নুহাশ ইসতিয়াক","Rakib Hussain Emon","Sakib Khan",
+    "Abdullah Al Sakib","Adinul islam","AI Saim","Alvid Shamim","Fahad Islam Bayzid","Farhan Sadik Suvo","Istehadul Islam Pranto","Jubaer hosen","Koushik Das","Kowshik barua","M S Rana","Mahin rahman","Mehedi Hassan Saikot","Mehrab Hossain","Mezanur Raham","Mohammad Likhon","Riadul islam emon","Sajed Alam","Shafin","Sheetal barua","Syed Ishtiak Ahmed","TA SI N","Taimul Haque","Zobayer alam","নুহাশ ইসতিয়াক","Rakib Hussain Emon","Sakib Khan","H M Al Mamun",
     /* Youth Team */
     "Abdullah Al Masud","Amv Shuvo","Anowar H Sifat","Arafat Bin Nizam","Bir Bahadur","HR ID OY","Is Hd Talha","Md Ariful Islam","Md Emon Hossain","Mehedi Hasan Rajib","Meherab Hosen","Musfiqur Rahman","Pabitro Raj","Rakibul Islam Rahat","Re Mi","Sabbir Hossain","Saimun islam Antu","Sezan Mahmud Bhuiyan Saad","Tahoshin Ahmed Zim",
     /* Club Legends */
@@ -3326,7 +3326,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     "Tahoshin Ahmed Zim": "llc-068@legacy-lions.app",
     "Sbs Faysal Ahmed": "llc-069@legacy-lions.app",
     "Rakib Hussain Emon": "llc-070@legacy-lions.app",
-    "Sakib Khan": "llc-071@legacy-lions.app"
+    "Sakib Khan": "llc-071@legacy-lions.app",
+    "H M Al Mamun": "llc-072@legacy-lions.app"
   };
   /* Firebase — the “Legacy Lions Viewer” project. Authentication
      checks the passwords; Firestore holds the profile photos (the
@@ -4886,7 +4887,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   "use strict";
   /* ---- User search — find any Legacy Lions squad member ----
      The magnifier button in the header (between the menu button and
-     the chat button) opens a panel listing all 71 squad members.
+     the chat button) opens a panel listing all 72 squad members.
      Typing in the panel's input filters the list live: the match is
      a case-insensitive substring test on the member's name, so
      “fay” finds Sbs Faysal Ahmed and “rana” finds M S Rana; the
@@ -4959,6 +4960,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     "নুহাশ ইসতিয়াক": "Academy Team",
     "Rakib Hussain Emon": "Academy Team",
     "Sakib Khan": "Academy Team",
+    "H M Al Mamun": "Academy Team",
     "Abdullah Al Masud": "Youth Team",
     "Amv Shuvo": "Youth Team",
     "Anowar H Sifat": "Youth Team",
@@ -5144,7 +5146,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      (window.LL_CURRENT_USER), their squad group (Main Team,
      Academy Team, Youth Team or Club Legends — from
      window.LL_squadGroupFor), their rank written as “Rank #X of
-     71”, and their stats (Played, W, D, L, Goals, POTM, Win rate).
+     72”, and their stats (Played, W, D, L, Goals, POTM, Win rate).
      The rank and stats come from window.LL_rankedPlayers — the
      exact ranked list the Player Stats & Ranking screen renders
      (the main script's computePlayerStats: real performance order
@@ -5212,7 +5214,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var groupEl = $("myRankGroup");
     if(groupEl) groupEl.textContent = name ? groupFor(name) : "";
     var rankEl = $("myRankRank");
-    if(rankEl) rankEl.textContent = e ? ("Rank #" + e.rank + " of " + info.total) : ("Rank #– of " + (info.total || 71));
+    if(rankEl) rankEl.textContent = e ? ("Rank #" + e.rank + " of " + info.total) : ("Rank #– of " + (info.total || 72));
     var noteEl = $("myRankNote");
     if(noteEl) noteEl.style.display = (e && !e.played) ? "" : "none";
     setStat("mrPlayed", e ? e.played : 0);
