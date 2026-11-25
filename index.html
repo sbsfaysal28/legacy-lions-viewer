@@ -937,7 +937,7 @@ html.login-done .login-gate{display:none !important}
 .ko-count{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:12px 0}
 .ko-register{width:100%;margin:4px 0 8px}
 .ko-register:disabled{opacity:.55;cursor:not-allowed}
-.ko-reg-timer{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:2px 0 8px;color:var(--gold)}
+.ko-reg-timer,.ko-timer-card{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:2px 0 8px;color:var(--gold)}
 .ko-reg-timer.is-open{color:var(--gold)}
 .ko-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .ko-bracket-wrap{overflow-x:auto;margin-top:10px;padding:2px 2px 8px;-webkit-overflow-scrolling:touch}
@@ -1037,7 +1037,7 @@ html.login-done .login-gate{display:none !important}
 .stats{display:none !important}
 
 /* ===== Timer style 104 — Arcade Neon (applied to both timers) */
-.ko-reg-timer{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--gold);border-radius:14px;padding:14px 10px}
+.ko-reg-timer,.ko-timer-card{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--gold);border-radius:14px;padding:14px 10px}
 .ko-reg-timer.is-open{color:var(--gold)}
 .ko-t104-label{font-size:11px;letter-spacing:2px;color:#a3a3a3}
 .ko-t104-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:32px;font-weight:900;line-height:1.2}
@@ -1075,7 +1075,7 @@ input[type=text],input[type=number],input[type=password],select,textarea{backgro
 .ko-t104-cyan{color:#111}
 .ko-t104-open{color:#ef4444}
 .ko-t104-clock{font-size:32px!important}
-.ko-reg-timer{background:#fff;border:3px solid #111;box-shadow:5px 5px 0 #ef4444}
+.ko-reg-timer,.ko-timer-card{background:#fff;border:3px solid #111;box-shadow:5px 5px 0 #ef4444}
 .ms-timer{background:#fff;border:3px solid #111;box-shadow:5px 5px 0 #ef4444}
 </style>
 <style>
@@ -1317,7 +1317,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
 
   <!-- MY MATCH SCHEDULE -->
   <section class="card screen" id="screen-my-schedule" aria-labelledby="h-myschedule">
-    <h2 id="h-myschedule"><span class="stepnum">2</span> My Match Schedule <span class="ms-timer" id="msTimer" role="timer"><span aria-hidden="true">⏱</span> <span id="msTimerText">Matchday 1 · Round of 32 · Loading…</span></span></h2>
+    <h2 id="h-myschedule"><span class="stepnum">2</span> My Match Schedule</h2>
+    <div class="ko-timer-card" id="msTimer" role="timer">Matchday 1 · Round of 32 · Loading…</div>
     <div class="ms-rules">
       <p class="ms-rules-title">Match Rules</p>
       <ol>
@@ -1580,7 +1581,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-0935-sakib-login-visible";
+  var LL_DEPLOY_ID = "2026-11-25-1124-timer-card-all";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7289,8 +7290,9 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     return p(m) + ":" + p(sec);
   }
 
-  /* Style 104 — Arcade Neon clock HTML: big monospace digits, pink/cyan
-     groups, the same look on every timer in the app. */
+  /* Shared countdown clock HTML, used by every timer in the app:
+     big Rye digits — days/mins red, hours/secs black, grey colons —
+     inside the white timer card. */
   function koClock104(ms){
     var s = Math.floor(ms / 1000);
     var d = Math.floor(s / 86400); s -= d * 86400;
@@ -7311,29 +7313,38 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     }
     return null;
   }
+  /* The matchday timer renders the SAME white timer card as the
+     registration timer (grey label, big Rye clock, DAYS : HRS : MIN :
+     SEC units) — only its own HTML is rewritten each tick. */
   function koUpdateTimer(){
     koUpdateRegTimer();
-    var el = $("msTimerText"); if(!el) return;
-    var box = $("msTimer");
+    var box = $("msTimer"); if(!box) return;
     var cur = koCurrentMatchday();
-    if(box) box.classList.remove("is-ended", "is-done");
+    box.classList.remove("is-ended", "is-done");
     if(!cur){
-      el.textContent = "Tournament complete 🏆";
-      if(box) box.classList.add("is-done");
+      box.innerHTML = '<span class="ko-t104-open">Tournament complete 🏆</span>';
+      box.classList.add("is-done");
       return;
     }
-    var label = "Matchday " + cur.matchday + " · " + cur.round + " · ";
+    var label = "Matchday " + cur.matchday + " · " + cur.round;
     var w = koTimerWindow(cur.matchday);
-    if(!w){ el.textContent = label + "Timer not set yet"; return; }
+    if(!w){ box.innerHTML = '<span class="ko-t104-open">' + label + ' · Timer not set yet</span>'; return; }
     var now = Date.now();
-    if(now < w.start){ el.innerHTML = label + "Starts in " + koClock104(w.start - now); return; }
+    if(now < w.start){
+      box.innerHTML = '<span class="ko-t104-label">' + label + ' · Starts in</span>'
+        + '<span class="ko-t104-clock">' + koClock104(w.start - now) + '</span>'
+        + '<span class="ko-t104-units">DAYS : HRS : MIN : SEC</span>';
+      return;
+    }
     var left = w.end - now;
     if(left <= 0){
-      el.textContent = label + "Time ended";
-      if(box) box.classList.add("is-ended");
+      box.innerHTML = '<span class="ko-t104-open">' + label + ' · Time ended</span>';
+      box.classList.add("is-ended");
       return;
     }
-    el.innerHTML = label + koClock104(left) + " left";
+    box.innerHTML = '<span class="ko-t104-label">' + label + ' · Time left</span>'
+      + '<span class="ko-t104-clock">' + koClock104(left) + '</span>'
+      + '<span class="ko-t104-units">DAYS : HRS : MIN : SEC</span>';
   }
   function koTimerStart(){
     if(koTimerIv) return;
@@ -7370,8 +7381,8 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var t = koRegistrationClosesAt();
     return t !== null && Date.now() >= t;
   }
-  /* Style 104 — Arcade Neon timer: black card, big monospace clock,
-     pink/cyan digit groups, DAYS : HRS : MIN : SEC labels. Only this
+  /* White timer card (the same card as the matchday timer): grey
+     label, big Rye clock, DAYS : HRS : MIN : SEC labels. Only this
      element's own HTML is rewritten each tick, same as before. */
   function koUpdateRegTimer(){
     var el = $("koRegTimer"); if(!el) return;
