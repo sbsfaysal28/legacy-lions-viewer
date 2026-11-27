@@ -1586,7 +1586,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-27-1215-full-bracket-png";
+  var LL_DEPLOY_ID = "2026-11-27-1736-matchday2-window";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -6859,7 +6859,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      Before a window starts, nobody can submit scores for that
      matchday. Rule 6: once a matchday window ends, any match on
      that matchday with no score submitted in time is both-lost. */
-  var KO_TIMER_WINDOWS = {1: {start: "2026-11-26T17:00:00+06:00", end: "2026-11-27T22:00:00+06:00"}, 2: null, 3: null, 4: null, 5: null};
+  var KO_TIMER_WINDOWS = {1: {start: "2026-11-26T17:00:00+06:00", end: "2026-11-27T22:00:00+06:00"}, 2: {start: "2026-11-27T22:10:00+06:00", end: "2026-11-28T23:30:00+06:00"}, 3: null, 4: null, 5: null};
   /* REGISTRATION TIMER — registration opens Tuesday 24 November
      2026, 11:59 PM (Dhaka time). Before that nobody can register:
      tapping "Register me" only shows "Registration is not open
@@ -7717,7 +7717,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      match. It ticks once a second and only rewrites its own
      text — it never re-renders the schedule, so typing in the
      Submit Score inputs is never wiped by a tick.
-     The windows live in KO_TIMER_WINDOWS above; matchdays 2–5 are
+     The windows live in KO_TIMER_WINDOWS above; matchdays 3–5 are
      still null until Robin provides their windows. */
   var koTimerIv = null;
   /* Submit-box reveal: which matchday the reveal flag belongs
