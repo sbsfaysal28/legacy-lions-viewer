@@ -1561,6 +1561,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     <button class="btn btn-gold ko-register" id="koRegisterBtn" type="button">Register me</button>
     <button class="btn btn-gold ko-find" id="koFindBtn" type="button" style="display:none">Find my position</button>
     <button class="btn btn-gold ko-find" id="koBracketBtn" type="button" style="display:none">⬇ Download my bracket (PNG)</button>
+    <button class="btn btn-gold ko-find" id="koFullBracketBtn" type="button" style="display:none">⬇ Download full bracket (PNG)</button>
     <div class="ko-reg-timer" id="koRegTimer" role="timer">Registration opens in …</div>
     <div class="msg" id="koMsg" role="status"></div>
     <h3 class="fc-sub">Bracket</h3>
@@ -1585,7 +1586,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-27-1205-my-bracket-robin-only";
+  var LL_DEPLOY_ID = "2026-11-27-1215-full-bracket-png";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7235,10 +7236,13 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     /* "Find my position" only makes sense once registered. */
     var findBtn = $("koFindBtn");
     if(findBtn) findBtn.style.display = mine ? "" : "none";
-    /* "Download my bracket" — Robin only (Sbs Faysal Ahmed,
-       llc-069): no other member sees this button. */
+    /* "Download my bracket" and "Download full bracket" — Robin
+       only (Sbs Faysal Ahmed, llc-069): no other member sees
+       these buttons. */
     var brBtn = $("koBracketBtn");
     if(brBtn) brBtn.style.display = (mine && koMyId() === "llc-069") ? "" : "none";
+    var fbBtn = $("koFullBracketBtn");
+    if(fbBtn) fbBtn.style.display = (mine && koMyId() === "llc-069") ? "" : "none";
     renderMySchedule();
     notifyKoWins();
   }
@@ -7455,6 +7459,246 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         });
       }catch(e){
         koBracketBusy = false;
+        koSetMsg("Sorry, the bracket picture could not be made in this browser.");
+      }
+    });
+  }
+  /* ---------- Full bracket picture (PNG) — Robin only ----------
+     The whole tournament progress, exactly like the bracket on
+     screen: all 31 matches on the two-sided World Cup layout
+     (R32 | R16 | QF | SF | FINAL | SF | QF | R16 | R32), every
+     player, every decided score, winners advancing, losers
+     struck through at full brightness (no dimming, like the
+     on-screen bracket), "Winner Mx" until a feeder is decided,
+     and the champion once the Final is decided. The button sits
+     in the Knockout Tournament section next to "Download my
+     bracket", and — like that one — shows only for Robin
+     (llc-069); the click handler checks the same id. Player
+     photos are loaded first (data URLs from Firestore, an
+     initial circle when there is no photo or a photo fails);
+     if loading takes too long the picture is drawn anyway with
+     the photos that are ready. Pure presentation: reads the
+     same koMatchTable() as the bracket, writes nothing. */
+  var KO_FULL_FEEDERS = {
+    Q1: ["M1", "M2"], Q2: ["M3", "M4"], Q3: ["M5", "M6"], Q4: ["M7", "M8"],
+    Q5: ["M9", "M10"], Q6: ["M11", "M12"], Q7: ["M13", "M14"], Q8: ["M15", "M16"],
+    QF1: ["Q1", "Q2"], QF2: ["Q3", "Q4"], QF3: ["Q5", "Q6"], QF4: ["Q7", "Q8"],
+    SF1: ["QF1", "QF2"], SF2: ["QF3", "QF4"], F1: ["SF1", "SF2"]
+  };
+  function koLoadBracketPhotos(names, done){
+    var map = {};
+    var urls = {};
+    for(var i = 0; i < names.length; i++){
+      var u = null;
+      try{ u = koSlotPhoto(names[i]); }catch(e){ u = null; }
+      if(u) urls[names[i]] = u;
+    }
+    var keys = Object.keys(urls);
+    var finished = false;
+    function finish(){ if(!finished){ finished = true; done(map); } }
+    if(!keys.length){ finish(); return; }
+    var pending = keys.length;
+    setTimeout(finish, 4000);
+    keys.forEach(function(n){
+      var img = new Image();
+      img.onload = function(){ map[n] = img; if(--pending <= 0) finish(); };
+      img.onerror = function(){ if(--pending <= 0) finish(); };
+      img.src = urls[n];
+    });
+  }
+  function drawKoFullBracketCard(table, photos){
+    var W = 2400, H = 1280;
+    var canvas = document.createElement("canvas"); canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext("2d");
+    var d = new Date();
+    var dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    var pad = 56;
+    var nameFont = '"Barlow Condensed", "Noto Sans Bengali", Arial, sans-serif';
+    var bodyFont = '"Barlow", "Noto Sans Bengali", Arial, sans-serif';
+    /* ---- header ---- */
+    ctx.fillStyle = "#0b1f14"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#d4af37"; ctx.fillRect(0, 0, W, 6);
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    ctx.fillStyle = "#d4af37"; ctx.font = '700 28px ' + nameFont;
+    ctx.fillText("S O L O   K N O C K O U T   T O U R N A M E N T  —  S E A S O N  2", pad, 52);
+    ctx.fillStyle = "#ffffff"; ctx.font = '700 72px ' + nameFont;
+    ctx.fillText("FULL BRACKET", pad, 118);
+    ctx.fillStyle = "#9fb3a4"; ctx.font = '600 26px ' + bodyFont; ctx.textAlign = "right";
+    ctx.fillText("32 PLAYERS  •  SINGLE ELIMINATION  •  " + dateStr.toUpperCase(), W - pad, 118);
+    ctx.textAlign = "left";
+    /* ---- columns ---- */
+    var cols = [
+      {title: "Round of 32", codes: ["M1","M2","M3","M4","M5","M6","M7","M8"]},
+      {title: "Round of 16", codes: ["Q1","Q2","Q3","Q4"]},
+      {title: "Quarterfinals", codes: ["QF1","QF2"]},
+      {title: "Semifinals", codes: ["SF1"]},
+      {title: "Final", codes: ["F1"]},
+      {title: "Semifinals", codes: ["SF2"]},
+      {title: "Quarterfinals", codes: ["QF3","QF4"]},
+      {title: "Round of 16", codes: ["Q5","Q6","Q7","Q8"]},
+      {title: "Round of 32", codes: ["M9","M10","M11","M12","M13","M14","M15","M16"]}
+    ];
+    var top = 218, areaH = 880, boxH = 100, boxW = 236, gap = 14;
+    var colW = (W - pad * 2 - gap * (cols.length - 1)) / cols.length;
+    var pos = {};
+    function colX(ci){ return pad + ci * (colW + gap); }
+    /* Round of 32: 8 boxes evenly spaced per side. */
+    for(var i = 0; i < 8; i++){
+      var yy = top + i * (areaH / 8) + (areaH / 8 - boxH) / 2;
+      pos["M" + (i + 1)] = {x: colX(0), y: yy};
+      pos["M" + (9 + i)] = {x: colX(8), y: yy};
+    }
+    /* Later rounds: each box sits centred on its two feeders. */
+    var order = ["Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","QF1","QF2","QF3","QF4","SF1","SF2","F1"];
+    var colOf = {};
+    for(var ci = 0; ci < cols.length; ci++) for(var k = 0; k < cols[ci].codes.length; k++) colOf[cols[ci].codes[k]] = ci;
+    for(var oi = 0; oi < order.length; oi++){
+      var code = order[oi];
+      var f = KO_FULL_FEEDERS[code];
+      var cA = pos[f[0]], cB = pos[f[1]];
+      if(cA && cB){
+        var midY = (cA.y + boxH / 2 + cB.y + boxH / 2) / 2;
+        pos[code] = {x: colX(colOf[code]), y: midY - boxH / 2};
+      }
+    }
+    /* column titles */
+    ctx.fillStyle = "#d4af37"; ctx.font = '700 26px ' + nameFont; ctx.textAlign = "center";
+    for(var ti = 0; ti < cols.length; ti++){
+      ctx.fillText(cols[ti].title.toUpperCase(), colX(ti) + colW / 2, top - 24);
+    }
+    ctx.textAlign = "left";
+    /* connectors: feeder box edge -> next box edge (elbow). */
+    ctx.strokeStyle = "#3a5a44"; ctx.lineWidth = 2;
+    for(var cj = 0; cj < order.length; cj++){
+      var cd = order[cj];
+      var fd = KO_FULL_FEEDERS[cd];
+      var p = pos[cd]; if(!p) continue;
+      var pcx = p.y + boxH / 2;
+      for(var fi = 0; fi < 2; fi++){
+        var fp = pos[fd[fi]]; if(!fp) continue;
+        var fcy = fp.y + boxH / 2;
+        var leftSide = colOf[fd[fi]] < colOf[cd];
+        var fx = leftSide ? fp.x + boxW : fp.x;
+        var tx = leftSide ? p.x : p.x + boxW;
+        var mx = (fx + tx) / 2;
+        ctx.beginPath();
+        ctx.moveTo(fx, fcy);
+        ctx.lineTo(mx, fcy);
+        ctx.lineTo(mx, pcx);
+        ctx.lineTo(tx, pcx);
+        ctx.stroke();
+      }
+    }
+    /* ---- one match box ---- */
+    function drawCell(cx, cy, name, lost, photoImg){
+      /* circle: photo or initial */
+      ctx.save(); ctx.beginPath(); ctx.arc(cx + 16, cy, 13, 0, Math.PI * 2); ctx.clip();
+      if(photoImg){
+        var sc = Math.max(26 / photoImg.width, 26 / photoImg.height);
+        var dw = photoImg.width * sc, dh = photoImg.height * sc;
+        ctx.drawImage(photoImg, cx + 16 - dw / 2, cy - dh / 2, dw, dh);
+      } else {
+        ctx.fillStyle = "#d4af37"; ctx.fillRect(cx + 3, cy - 13, 26, 26);
+        ctx.fillStyle = "#0b1f14"; ctx.font = '700 20px ' + nameFont; ctx.textAlign = "center";
+        ctx.fillText(initialOf(name) || "?", cx + 16, cy + 1);
+        ctx.textAlign = "left";
+      }
+      ctx.restore();
+      ctx.strokeStyle = "#d4af37"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx + 16, cy, 13, 0, Math.PI * 2); ctx.stroke();
+      /* name stays full-bright like the on-screen bracket;
+         a loser only gets the red line through it. */
+      ctx.fillStyle = "#ffffff";
+      ctx.font = '600 23px ' + bodyFont;
+      var label = fitTextC(ctx, name, boxW - 52);
+      ctx.fillText(label, cx + 38, cy);
+      if(lost){
+        var wdt = ctx.measureText(label).width;
+        ctx.strokeStyle = "#e01e2b"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(cx + 38, cy); ctx.lineTo(cx + 38 + wdt, cy); ctx.stroke();
+      }
+    }
+    function isLoser(t, id){
+      if(!t || !id || t.res.status !== "decided") return false;
+      if(t.res.bothLost) return (id === t.aId || id === t.bId);
+      if(!t.res.winnerId) return false;
+      return (id === t.aId && t.res.winnerId === t.bId) || (id === t.bId && t.res.winnerId === t.aId);
+    }
+    for(var mi = 0; mi < cols.length; mi++){
+      for(var mj = 0; mj < cols[mi].codes.length; mj++){
+        var code2 = cols[mi].codes[mj];
+        var t = table[code2];
+        var p2 = pos[code2];
+        if(!t || !p2) continue;
+        var bx = p2.x, by = p2.y;
+        ctx.fillStyle = "#12291c"; ctx.fillRect(bx, by, boxW, boxH);
+        ctx.fillStyle = "#d4af37"; ctx.fillRect(bx, by, boxW, 3);
+        /* label + score */
+        ctx.fillStyle = "#d4af37"; ctx.font = '700 22px ' + nameFont;
+        ctx.fillText(code2 === "F1" ? "FINAL" : code2, bx + 12, by + 18);
+        if(t.res.status === "decided"){
+          ctx.fillStyle = "#ffffff"; ctx.font = '700 24px ' + bodyFont; ctx.textAlign = "right";
+          ctx.fillText(t.res.bothLost ? "Both lost" : (t.res.gf + " – " + t.res.ga + (t.res.pen ? " (P)" : "")), bx + boxW - 12, by + 18);
+          ctx.textAlign = "left";
+        }
+        /* players (or "Winner Mx" until the feeder is decided) */
+        if(t.aId) drawCell(bx + 12, by + 50, t.aName, isLoser(t, t.aId), photos[t.aName] || null);
+        else { ctx.fillStyle = "#5c6a5f"; ctx.font = '600 23px ' + bodyFont; ctx.fillText("Winner " + (t.feederA || "?"), bx + 12, by + 50); }
+        if(t.bId) drawCell(bx + 12, by + 84, t.bName, isLoser(t, t.bId), photos[t.bName] || null);
+        else { ctx.fillStyle = "#5c6a5f"; ctx.font = '600 23px ' + bodyFont; ctx.fillText("Winner " + (t.feederB || "?"), bx + 12, by + 84); }
+      }
+    }
+    /* ---- champion ---- */
+    var fp = pos["F1"];
+    var champ = koWinnerOfTable(table, "F1");
+    var chy = fp ? fp.y + boxH + 26 : top + areaH / 2;
+    ctx.fillStyle = "#12291c"; ctx.fillRect(colX(4), chy, boxW, 84);
+    ctx.fillStyle = "#d4af37"; ctx.font = '700 24px ' + nameFont; ctx.textAlign = "center";
+    ctx.fillText("🏆  CHAMPION", colX(4) + boxW / 2, chy + 26);
+    ctx.fillStyle = champ ? "#ffffff" : "#5c6a5f"; ctx.font = '600 26px ' + bodyFont;
+    ctx.fillText(champ ? fitTextC(ctx, champ.name, boxW - 24) : "TBD", colX(4) + boxW / 2, chy + 60);
+    ctx.textAlign = "left";
+    /* ---- footer ---- */
+    ctx.fillStyle = "#9fb3a4"; ctx.font = '700 22px ' + nameFont;
+    ctx.fillText("LEGACY LIONS  •  " + dateStr.toUpperCase(), pad, H - 40);
+    ctx.textAlign = "right";
+    ctx.fillText("SOLO KNOCKOUT TOURNAMENT — SEASON 2", W - pad, H - 40);
+    ctx.textAlign = "left";
+    return canvas;
+  }
+  var koFullBracketBtn = $("koFullBracketBtn");
+  if(koFullBracketBtn){
+    var koFullBusy = false;
+    koFullBracketBtn.addEventListener("click", function(){
+      if(koFullBusy) return;
+      if(koMyId() !== "llc-069"){ koSetMsg("This bracket download is only for Sbs Faysal Ahmed."); return; }
+      koFullBusy = true;
+      try{
+        var table = koMatchTable();
+        var names = [];
+        for(var ni = 0; ni < koRegs.length; ni++){ if(koRegs[ni] && koRegs[ni].name) names.push(koRegs[ni].name); }
+        koLoadBracketPhotos(names, function(photos){
+          try{
+            var canvas = drawKoFullBracketCard(table, photos);
+            koFullBusy = false;
+            var fname = "legacy-lions-knockout-full-bracket.png";
+            if(canvas.toBlob){
+              canvas.toBlob(function(blob){
+                if(blob){
+                  if(window.LL_downloadBlob) window.LL_downloadBlob(blob, fname);
+                  koSetMsg("The full bracket picture downloaded — send the PNG to your friends.");
+                }
+              }, "image/png");
+            } else {
+              var a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+              koSetMsg("The full bracket picture downloaded.");
+            }
+          }catch(e2){
+            koFullBusy = false;
+            koSetMsg("Sorry, the bracket picture could not be made in this browser.");
+          }
+        });
+      }catch(e){
+        koFullBusy = false;
         koSetMsg("Sorry, the bracket picture could not be made in this browser.");
       }
     });
