@@ -1560,6 +1560,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     <p class="ko-count" id="koCount" role="status">0 / 32 spots filled</p>
     <button class="btn btn-gold ko-register" id="koRegisterBtn" type="button">Register me</button>
     <button class="btn btn-gold ko-find" id="koFindBtn" type="button" style="display:none">Find my position</button>
+    <button class="btn btn-gold ko-find" id="koBracketBtn" type="button" style="display:none">⬇ Download my bracket (PNG)</button>
     <div class="ko-reg-timer" id="koRegTimer" role="timer">Registration opens in …</div>
     <div class="msg" id="koMsg" role="status"></div>
     <h3 class="fc-sub">Bracket</h3>
@@ -1584,7 +1585,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-25-2010-remove-fahim-omam";
+  var LL_DEPLOY_ID = "2026-11-27-1205-my-bracket-robin-only";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -7234,8 +7235,229 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     /* "Find my position" only makes sense once registered. */
     var findBtn = $("koFindBtn");
     if(findBtn) findBtn.style.display = mine ? "" : "none";
+    /* "Download my bracket" — Robin only (Sbs Faysal Ahmed,
+       llc-069): no other member sees this button. */
+    var brBtn = $("koBracketBtn");
+    if(brBtn) brBtn.style.display = (mine && koMyId() === "llc-069") ? "" : "none";
     renderMySchedule();
     notifyKoWins();
+  }
+  /* ---------- My Bracket picture (PNG) — Robin only ----------
+     Sbs Faysal Ahmed's own road through the knockout, Round of
+     32 to the Final, as a downloadable picture: one row per
+     round with the opponent, the score from his side, and the
+     result (WON / LOST / draw awaiting penalties / upcoming /
+     awaiting opponent / not reached). Only his matches are
+     shown — never the full 32-player bracket. The button lives
+     in the Knockout Tournament section, next to "Find my
+     position", and shows only for Robin (llc-069); the click
+     handler checks the same id, so no other member can use it
+     even if the button were shown. Pure presentation: it reads
+     the same koMatchTable() as the bracket, writes nothing. */
+  function koMyRoad(){
+    var mine = koMyReg();
+    var myId = koMyId();
+    var myName = currentUser();
+    if(!mine || !myId || !myName) return null;
+    var table = koMatchTable();
+    var m = Math.ceil(mine.slot / 2);
+    var q = Math.ceil(m / 2);
+    var qf = Math.ceil(q / 2);
+    var sf = Math.ceil(qf / 2);
+    var chain = [
+      {code: "M" + m, round: "Round of 32", matchday: "Matchday 1"},
+      {code: "Q" + q, round: "Round of 16", matchday: "Matchday 2"},
+      {code: "QF" + qf, round: "Quarterfinal", matchday: "Matchday 3"},
+      {code: "SF" + sf, round: "Semifinal", matchday: "Matchday 4"},
+      {code: "F1", round: "Final", matchday: "Matchday 5"}
+    ];
+    var rows = [];
+    var elimRound = null;
+    for(var i = 0; i < chain.length; i++){
+      var c = chain[i];
+      var t = table[c.code];
+      var base = {round: c.round, matchday: c.matchday, code: c.code};
+      if(!t){ base.status = "notreached"; base.line = "Not reached"; base.note = ""; rows.push(base); continue; }
+      var inMatch = (i === 0) || (t.aId === myId || t.bId === myId);
+      if(!inMatch){
+        if(elimRound){
+          base.status = "notreached"; base.line = "Eliminated in the " + elimRound; base.note = "";
+        } else {
+          var prev = chain[i - 1];
+          var prevT = table[prev.code];
+          if(prevT && prevT.res.status === "decided" && prevT.res.winnerId === myId){
+            /* Through from the previous round — the opponent is
+               the winner of the other feeder, not decided yet. */
+            var otherFeeder = (t.feederA === prev.code) ? t.feederB : t.feederA;
+            base.status = "awaiting"; base.line = "vs Winner of " + (otherFeeder || "?"); base.note = "Awaiting opponent";
+          } else {
+            base.status = "notreached"; base.line = "Not reached"; base.note = "Win the " + prev.round + " to reach here";
+          }
+        }
+        rows.push(base);
+        continue;
+      }
+      var res = t.res;
+      var iAmA = (myId === t.aId);
+      var oppName = iAmA ? (t.bName || "Opponent") : (t.aName || "Opponent");
+      var oppId = iAmA ? t.bId : t.aId;
+      if(res.status === "decided"){
+        if(res.bothLost){
+          base.status = "bothlost"; base.line = "Both lost — no score in time"; base.note = "";
+        } else {
+          var won = (res.winnerId === myId);
+          var myGf = iAmA ? res.gf : res.ga;
+          var opGf = iAmA ? res.ga : res.gf;
+          if(!won && !elimRound) elimRound = c.round;
+          base.status = won ? "won" : "lost";
+          base.line = myName + " " + myGf + " – " + opGf + " " + oppName + (res.pen ? " (P)" : "");
+          base.note = won ? (c.code === "F1" ? "Champion" : "Won — through to the " + (chain[i + 1] ? chain[i + 1].round : "title")) : "Eliminated";
+        }
+      } else if(res.status === "draw"){
+        base.status = "draw"; base.line = myName + " " + res.gf + " – " + res.ga + " " + oppName; base.note = "Draw — penalty winner needed";
+      } else if(!oppId){
+        var feeder = iAmA ? t.feederB : t.feederA;
+        base.status = "awaiting"; base.line = "vs Winner of " + (feeder || "?"); base.note = "Awaiting opponent";
+      } else {
+        base.status = "upcoming"; base.line = "vs " + oppName; base.note = "Upcoming — no score yet";
+      }
+      rows.push(base);
+    }
+    return {name: myName, slot: mine.slot, rows: rows};
+  }
+  function koSlug(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "player"; }
+  function drawKoBracketCard(road, photo, done){
+    var W = 1080, H = 1080;
+    var canvas = document.createElement("canvas"); canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext("2d");
+    var d = new Date();
+    var dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    var pad = 56;
+    var nameFont = '"Barlow Condensed", "Noto Sans Bengali", Arial, sans-serif';
+    var bodyFont = '"Barlow", "Noto Sans Bengali", Arial, sans-serif';
+    function badgeFor(status){
+      if(status === "won") return {text: "WON", bg: "#d4af37", fg: "#0b1f14"};
+      if(status === "lost") return {text: "LOST", bg: "#e01e2b", fg: "#ffffff"};
+      if(status === "draw") return {text: "DRAW", bg: "#b7791f", fg: "#ffffff"};
+      if(status === "upcoming") return {text: "UPCOMING", bg: null, fg: "#d4af37"};
+      if(status === "awaiting") return {text: "AWAITING", bg: null, fg: "#d4af37"};
+      if(status === "bothlost") return {text: "BOTH LOST", bg: "#e01e2b", fg: "#ffffff"};
+      return {text: "LOCKED", bg: "#2a3a30", fg: "#9fb3a4"};
+    }
+    function paint(photoImg){
+      ctx.fillStyle = "#0b1f14"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#d4af37"; ctx.fillRect(0, 0, W, 6);
+      ctx.textBaseline = "middle";
+      /* header */
+      ctx.fillStyle = "#d4af37"; ctx.font = '700 26px ' + nameFont; ctx.textAlign = "left";
+      ctx.fillText("S O L O   K N O C K O U T   T O U R N A M E N T  —  S E A S O N  2", pad, 56);
+      var nm = String(road.name || "My bracket").toUpperCase();
+      var nameSize = 80;
+      ctx.font = '700 ' + nameSize + 'px ' + nameFont;
+      while(ctx.measureText(nm).width > W - pad * 2 - 170 && nameSize > 42){ nameSize -= 4; ctx.font = '700 ' + nameSize + 'px ' + nameFont; }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(nm, pad, 126);
+      ctx.fillStyle = "#9fb3a4"; ctx.font = '600 26px ' + bodyFont;
+      ctx.fillText("MY BRACKET  •  SLOT #" + road.slot, pad, 180);
+      /* photo / initial circle, top right */
+      var cx = W - pad - 60, cy = 126, cr = 60;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.clip();
+      if(photoImg){
+        var sc = Math.max((cr * 2) / photoImg.width, (cr * 2) / photoImg.height);
+        var dw = photoImg.width * sc, dh = photoImg.height * sc;
+        ctx.drawImage(photoImg, cx - dw / 2, cy - dh / 2, dw, dh);
+      } else {
+        ctx.fillStyle = "#d4af37"; ctx.fillRect(cx - cr, cy - cr, cr * 2, cr * 2);
+        ctx.fillStyle = "#0b1f14"; ctx.font = '700 64px ' + nameFont; ctx.textAlign = "center";
+        ctx.fillText(initialOf(road.name) || "?", cx, cy + 2);
+        ctx.textAlign = "left";
+      }
+      ctx.restore();
+      ctx.strokeStyle = "#d4af37"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.stroke();
+      /* one row per round */
+      var y = 232, rowH = 132, gap = 12;
+      for(var i = 0; i < road.rows.length; i++){
+        var r = road.rows[i];
+        var badge = badgeFor(r.status);
+        ctx.fillStyle = "#12291c"; ctx.fillRect(pad, y, W - pad * 2, rowH);
+        ctx.fillStyle = (r.status === "lost" || r.status === "bothlost") ? "#e01e2b" : (r.status === "won" ? "#d4af37" : (r.status === "notreached" ? "#2a3a30" : "#d4af37"));
+        ctx.fillRect(pad, y, 6, rowH);
+        /* line 1: round + badge */
+        ctx.font = '700 32px ' + nameFont;
+        var rw = ctx.measureText(r.round.toUpperCase()).width;
+        ctx.fillStyle = "#ffffff"; ctx.textAlign = "left";
+        ctx.fillText(r.round.toUpperCase(), pad + 26, y + 42);
+        ctx.fillStyle = "#9fb3a4"; ctx.font = '600 24px ' + bodyFont;
+        ctx.fillText(r.code + "  •  " + r.matchday, pad + 26 + rw + 16, y + 42);
+        ctx.font = '700 24px ' + nameFont;
+        var bw = ctx.measureText(badge.text).width + 36;
+        var bx = W - pad - bw, by = y + 20, bh = 44;
+        if(badge.bg){ ctx.fillStyle = badge.bg; ctx.fillRect(bx, by, bw, bh); }
+        else { ctx.strokeStyle = badge.fg; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh); }
+        ctx.fillStyle = badge.fg; ctx.textAlign = "center";
+        ctx.fillText(badge.text, bx + bw / 2, by + bh / 2 + 1);
+        ctx.textAlign = "left";
+        /* line 2: matchup on the left, note on the right */
+        var noteTxt = r.note || "";
+        var noteX = W - pad - 26;
+        if(noteTxt){
+          ctx.font = '500 22px ' + bodyFont;
+          noteX -= ctx.measureText(noteTxt).width;
+        }
+        ctx.fillStyle = (r.status === "notreached" && r.line !== "Not reached") ? "#e8c15a" : "#ffffff";
+        ctx.font = '600 30px ' + bodyFont;
+        ctx.fillText(fitTextC(ctx, r.line, noteX - 24 - (pad + 26)), pad + 26, y + 94);
+        if(noteTxt){
+          ctx.fillStyle = "#9fb3a4"; ctx.font = '500 22px ' + bodyFont;
+          ctx.fillText(noteTxt, noteX, y + 94);
+        }
+        y += rowH + gap;
+      }
+      /* footer */
+      ctx.fillStyle = "#9fb3a4"; ctx.font = '700 22px ' + nameFont; ctx.textAlign = "left";
+      ctx.fillText("LEGACY LIONS  •  " + dateStr.toUpperCase(), pad, H - 44);
+      ctx.textAlign = "right";
+      ctx.fillText("SOLO KNOCKOUT TOURNAMENT — SEASON 2", W - pad, H - 44);
+      ctx.textAlign = "left";
+      done(canvas);
+    }
+    if(photo){
+      var img = new Image();
+      img.onload = function(){ paint(img); };
+      img.onerror = function(){ paint(null); };
+      img.src = photo;
+    } else { paint(null); }
+  }
+  var koBracketBtn = $("koBracketBtn");
+  if(koBracketBtn){
+    var koBracketBusy = false;
+    koBracketBtn.addEventListener("click", function(){
+      if(koBracketBusy) return;
+      if(koMyId() !== "llc-069"){ koSetMsg("This bracket download is only for Sbs Faysal Ahmed."); return; }
+      var road = koMyRoad();
+      if(!road){ koSetMsg("Register for the tournament first, then download your bracket."); return; }
+      koBracketBusy = true;
+      try{
+        drawKoBracketCard(road, koSlotPhoto(road.name), function(canvas){
+          koBracketBusy = false;
+          var fname = koSlug(road.name) + "-knockout-bracket.png";
+          if(canvas.toBlob){
+            canvas.toBlob(function(blob){
+              if(blob){
+                if(window.LL_downloadBlob) window.LL_downloadBlob(blob, fname);
+                koSetMsg("Your bracket picture downloaded — send the PNG to your friends.");
+              }
+            }, "image/png");
+          } else {
+            var a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+            koSetMsg("Your bracket picture downloaded.");
+          }
+        });
+      }catch(e){
+        koBracketBusy = false;
+        koSetMsg("Sorry, the bracket picture could not be made in this browser.");
+      }
+    });
   }
   /* ---------- My Match Schedule — the logged-in member's own
      knockout matches, built automatically from their
