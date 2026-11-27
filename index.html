@@ -1170,7 +1170,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   </div>
 </div>
 <!-- User search panel — opened by tapping the magnifier in the header.
-     Lists all 71 Legacy Lions squad members with their photo (or
+     Lists all 69 Legacy Lions squad members with their photo (or
      first-letter circle), name and squad group; the input at the top
      filters the list as you type, and tapping a member opens their
      profile view (see the search script at the end of the page). -->
@@ -1443,7 +1443,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       <div class="mr-id">
         <p class="mr-name" id="myRankName">My ranking</p>
         <p class="mr-group" id="myRankGroup"></p>
-        <p class="mr-rank" id="myRankRank">Rank #– of 71</p>
+        <p class="mr-rank" id="myRankRank">Rank #– of 69</p>
         <p class="mr-note" id="myRankNote" style="display:none">No matches played yet — the order is random for now.</p>
       </div>
     </div>
@@ -1586,7 +1586,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-27-1742-matchdays-345";
+  var LL_DEPLOY_ID = "2026-11-28-0044-remove-likhon-riadul";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -1773,7 +1773,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      - Win rate = round(Wins / Played × 100).
      Ranking order is the main app's: goals, then wins, then win
      rate, then played, then name.
-     The ranking lists ALL 71 Legacy Lions squad members (from
+     The ranking lists ALL 69 Legacy Lions squad members (from
      window.LL_squadMembers, defined by the login script), not only
      players who took part in a match: a member's real counted stats
      are matched in by name, and a member with no counted match keeps
@@ -1877,7 +1877,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
         winRate: played>0? Math.round(wins/played*100):0 };
     });
     /* Merge the counted stats into the full squad list: every one
-       of the 71 squad members is always listed. A member's counted
+       of the 69 squad members is always listed. A member's counted
        entry is matched by name; a member with no counted match gets
        real zero stats. (A published player who is not a squad
        member is kept only when they have actually played.) When the
@@ -2303,7 +2303,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     $("scorersEmpty").style.display = scorers.length? "none":"block";
   }
 
-  /* Player Stats & Ranking — all 71 squad members ranked (see
+  /* Player Stats & Ranking — all 69 squad members ranked (see
      computePlayerStats), 10 per page with Previous / Next paging.
      psPage is display-only state, held in memory like the Matchday
      Centre's open day. */
@@ -2318,7 +2318,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       /* The squad list comes from the login script, which runs
          after this one — on the very first render it may not exist
          yet. Hide the table and render again once the page has
-         fully loaded; by then all 71 members are known. */
+         fully loaded; by then all 69 members are known. */
       tb.innerHTML="";
       if(wrap) wrap.style.display="none";
       if(pager) pager.style.display="none";
@@ -3199,7 +3199,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   "use strict";
   /* ---- Login gate — Legacy Lions squad members only ----
      The viewer opens locked, exactly like the main app. The only way
-     in is the name of one of the 71 Legacy Lions squad members
+     in is the name of one of the 69 Legacy Lions squad members
      (collected from the club's COBEG squad page — Main Team, Academy
      Team, Youth Team and Club Legends, spellings kept exactly as
      listed there) together with that member's password. There is NO
@@ -3243,7 +3243,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     /* Main Team */
     "Ahnaf Bhuiyan","AR Antor (Antor Roy)","Ariful Islam","Bayejid Hossain","Ibrahim Samin","Jayed Ahmed Sami","JUBAID SHAHRIA","Krishna Sarkar","Md. Tamim Hossain","Mehrab Hossain Polash","Muntasi R","Niyamul Chowdhury","Rahat khan","Raisul Islam Fahim","Ro Ha N","Sadman Prodhan","Safin Samee","Shahed mhamud","Shuaibe Hasan Fahim","Si Emon","Yameen Hossen Sabbir","শাহপরান হোসেন সাকিব","সামিন শাফায়াত",
     /* Academy Team */
-    "Abdullah Al Sakib","Adinul islam","AI Saim","Alvid Shamim","Fahad Islam Bayzid","Farhan Sadik Suvo","Istehadul Islam Pranto","Jubaer hosen","Koushik Das","Kowshik barua","M S Rana","Mahin rahman","Mehedi Hassan Saikot","Mehrab Hossain","Mezanur Raham","Mohammad Likhon","Riadul islam emon","Sajed Alam","Shafin","Sheetal barua","Syed Ishtiak Ahmed","TA SI N","Taimul Haque","Zobayer alam","নুহাশ ইসতিয়াক","Rakib Hussain Emon","Sakib Khan","H M Al Mamun",
+    "Abdullah Al Sakib","Adinul islam","AI Saim","Alvid Shamim","Fahad Islam Bayzid","Farhan Sadik Suvo","Istehadul Islam Pranto","Jubaer hosen","Koushik Das","Kowshik barua","M S Rana","Mahin rahman","Mehedi Hassan Saikot","Mehrab Hossain","Mezanur Raham","Sajed Alam","Shafin","Sheetal barua","Syed Ishtiak Ahmed","TA SI N","Taimul Haque","Zobayer alam","নুহাশ ইসতিয়াক","Rakib Hussain Emon","Sakib Khan","H M Al Mamun",
     /* Youth Team */
     "Abdullah Al Masud","Amv Shuvo","Anowar H Sifat","Arafat Bin Nizam","Bir Bahadur","HR ID OY","Is Hd Talha","Md Ariful Islam","Md Emon Hossain","Mehedi Hasan Rajib","Meherab Hosen","Musfiqur Rahman","Pabitro Raj","Rakibul Islam Rahat","Re Mi","Sabbir Hossain","Saimun islam Antu","Sezan Mahmud Bhuiyan Saad","Tahoshin Ahmed Zim",
     /* Club Legends */
@@ -3256,7 +3256,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   for(var i = 0; i < SQUAD.length; i++) CANON[normName(SQUAD[i])] = SQUAD[i];
   /* Each member's Firebase account email, keyed by the member's name
      in its original collected spelling — the accounts were created in
-     exactly the SQUAD order above (llc-001 … llc-069); Rakib Hussain Emon was added later as llc-070 (Academy, 23 Nov 2026); Sakib Khan added as llc-071 (Academy, 25 Nov 2026). */
+     exactly the SQUAD order above (llc-001 … llc-069); Rakib Hussain Emon was added later as llc-070 (Academy, 23 Nov 2026); Sakib Khan added as llc-071 (Academy, 25 Nov 2026). Mohammad Likhon (llc-040) and Riadul islam emon (llc-041) were removed permanently on 28 Nov 2026. */
   var SQUAD_EMAIL = {
     "Ahnaf Bhuiyan": "llc-001@legacy-lions.app",
     "AR Antor (Antor Roy)": "llc-002@legacy-lions.app",
@@ -3296,8 +3296,6 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     "Mehedi Hassan Saikot": "llc-037@legacy-lions.app",
     "Mehrab Hossain": "llc-038@legacy-lions.app",
     "Mezanur Raham": "llc-039@legacy-lions.app",
-    "Mohammad Likhon": "llc-040@legacy-lions.app",
-    "Riadul islam emon": "llc-041@legacy-lions.app",
     "Sajed Alam": "llc-042@legacy-lions.app",
     "Shafin": "llc-043@legacy-lions.app",
     "Sheetal barua": "llc-044@legacy-lions.app",
@@ -4888,7 +4886,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
   "use strict";
   /* ---- User search — find any Legacy Lions squad member ----
      The magnifier button in the header (between the menu button and
-     the chat button) opens a panel listing all 71 squad members.
+     the chat button) opens a panel listing all 69 squad members.
      Typing in the panel's input filters the list live: the match is
      a case-insensitive substring test on the member's name, so
      “fay” finds Sbs Faysal Ahmed and “rana” finds M S Rana; the
@@ -4948,8 +4946,6 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     "Mehedi Hassan Saikot": "Academy Team",
     "Mehrab Hossain": "Academy Team",
     "Mezanur Raham": "Academy Team",
-    "Mohammad Likhon": "Academy Team",
-    "Riadul islam emon": "Academy Team",
     "Sajed Alam": "Academy Team",
     "Shafin": "Academy Team",
     "Sheetal barua": "Academy Team",
@@ -5214,7 +5210,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var groupEl = $("myRankGroup");
     if(groupEl) groupEl.textContent = name ? groupFor(name) : "";
     var rankEl = $("myRankRank");
-    if(rankEl) rankEl.textContent = e ? ("Rank #" + e.rank + " of " + info.total) : ("Rank #– of " + (info.total || 71));
+    if(rankEl) rankEl.textContent = e ? ("Rank #" + e.rank + " of " + info.total) : ("Rank #– of " + (info.total || 69));
     var noteEl = $("myRankNote");
     if(noteEl) noteEl.style.display = (e && !e.played) ? "" : "none";
     setStat("mrPlayed", e ? e.played : 0);
@@ -7096,7 +7092,14 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     var filled = koRegs.length;
     var regClosed = koRegClosed();
     if(countEl) countEl.textContent = filled + " / " + KO_TOTAL + " spots filled";
-    if(emptyEl) emptyEl.style.display = filled ? "none" : "";
+    if(emptyEl){
+      emptyEl.style.display = filled ? "none" : "";
+      /* A failed load used to look exactly like "no registrations"
+         (koFailed was set but never shown) — say so plainly. */
+      emptyEl.textContent = (!filled && koFailed)
+        ? "Couldn't load the bracket — check your connection, then close the app fully and open the link fresh in Chrome."
+        : "No registrations yet — be the first to take a slot.";
+    }
     var bySlot = {};
     for(var i = 0; i < koRegs.length; i++){ var r = koRegs[i]; if(r.slot >= 1 && r.slot <= KO_TOTAL) bySlot[r.slot] = r; }
     /* One Round-of-32 cell: the registered player's photo + name at
@@ -8330,10 +8333,10 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     try{
       var col = dbv.collection("knockoutRegistrations");
       koUnsub = col.onSnapshot(function(snap){ applyKoSnapshot(snap); }, function(){
-        /* Listener failed (offline, rules, …) — one-time fetch. */
-        try{
-          col.get().then(function(snap){ applyKoSnapshot(snap); }).catch(function(){ koFailed = true; renderKnockout(); });
-        }catch(e2){ koFailed = true; renderKnockout(); }
+        /* Listener failed (offline, rules, …) — one-time fetch,
+           retried, so a transient stall no longer leaves the
+           bracket silently empty. */
+        koFetchOnce(col, applyKoSnapshot, function(){ koFailed = true; renderKnockout(); });
       });
       /* Match scores: a second listener on knockoutMatches, so
          submitted scores, results and bracket advancement update
@@ -8341,7 +8344,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       try{
         var mcol = dbv.collection("knockoutMatches");
         koMUnsub = mcol.onSnapshot(function(snap){ applyKoMatchSnapshot(snap); }, function(){
-          try{ mcol.get().then(function(snap){ applyKoMatchSnapshot(snap); }).catch(function(){}); }catch(e2){}
+          koFetchOnce(mcol, applyKoMatchSnapshot, function(){});
         });
       }catch(e3){}
     }catch(e){
@@ -8349,6 +8352,24 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
       koFailed = true;
       renderKnockout();
     }
+  }
+  /* Retry a one-time collection fetch a few times before giving up
+     (a transient stall used to leave the bracket silently empty). */
+  function koFetchOnce(col, apply, done){
+    var tries = 0;
+    (function attempt(){
+      try{
+        col.get().then(function(snap){ apply(snap); }).catch(function(){
+          tries++;
+          if(tries < 3) setTimeout(attempt, tries === 1 ? 3000 : 8000);
+          else if(done) done();
+        });
+      }catch(e){
+        tries++;
+        if(tries < 3) setTimeout(attempt, tries === 1 ? 3000 : 8000);
+        else if(done) done();
+      }
+    })();
   }
   function stopKnockout(){
     if(koUnsub){ try{ koUnsub(); }catch(e){} koUnsub = null; }
