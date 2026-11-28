@@ -1586,7 +1586,7 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
      results. (A deploy whose published data changed is also caught
      even if the stamp was forgotten, because the deploy fingerprint
      includes a hash of the PUBLISHED snapshot below.) */
-  var LL_DEPLOY_ID = "2026-11-28-0044-remove-likhon-riadul";
+  var LL_DEPLOY_ID = "2026-11-28-0909-bracket-removed-player";
   window.LL_DEPLOY_ID = LL_DEPLOY_ID;
   /* ---------- Published snapshot ----------
      Four published friendly results, in time order: Is Hd Talha
@@ -6949,9 +6949,23 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
     for(var i = 0; i < koRegs.length; i++){ var r = koRegs[i]; if(r.slot >= 1 && r.slot <= KO_TOTAL) bySlot[r.slot] = r; }
     function slotId(s){ var x = bySlot[s]; return x ? x.id : null; }
     function slotName(s){ var x = bySlot[s]; return x ? x.name : null; }
+    /* A player removed from the club has no registration (and no
+       name) any more, but their decided results must still show
+       and their winners must still advance — the match document
+       holds their id. Show a neutral label, never their name. */
+    function koTableName(id, name){
+      if(name) return name;
+      if(!id) return null;
+      var rg = koRegById(id);
+      return rg ? rg.name : "Removed player";
+    }
     var table = {};
     function add(code, round, matchday, aId, bId, aName, bName, feederA, feederB){
       var d = koMatches[code] || null;
+      if(!aId && d && d.aId) aId = d.aId;
+      if(!bId && d && d.bId) bId = d.bId;
+      if(aId) aName = koTableName(aId, aName);
+      if(bId) bName = koTableName(bId, bName);
       var res = koResolveData(d, aId, bId, matchday);
       table[code] = {code: code, round: round, matchday: matchday, aId: aId, bId: bId, aName: aName, bName: bName, feederA: feederA || null, feederB: feederB || null, res: res};
     }
@@ -7107,6 +7121,17 @@ a[href*="netlify.com"],a[href*="netlify.app"],a[href*="netlify.io"]{
        member's own cell is gold so they can find it instantly. */
     function koCell(slot, code){
       var reg = bySlot[slot];
+      if(!reg){
+        /* The slot's player was removed from the club, but the
+           match is decided — show them as a removed player
+           instead of an empty slot. */
+        var tt = table[code];
+        if(tt && tt.res.status === "decided"){
+          var rid = (slot % 2 === 1) ? tt.aId : tt.bId;
+          var rname = (slot % 2 === 1) ? tt.aName : tt.bName;
+          if(rid) reg = {id: rid, name: rname || "Removed player"};
+        }
+      }
       var isMine = !!(mine && reg && reg.id === mine.id);
       var lost = koIsLoser(code, reg ? reg.id : null);
       var cls = "ko-cell" + (reg ? " filled" : "") + (isMine ? " mine" : "") + (lost ? " ko-lost" : "");
